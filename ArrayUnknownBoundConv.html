@@ -1,0 +1,132 @@
+<html> 
+	<style type="text/css">
+<style type="text/css">
+
+body { color: #000000; background-color: #FFFFFF; }
+ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
+del, del * { text-decoration:line-through; background-color:#FFA0A0 }
+#hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+
+p.example { margin-left: 2em; }
+pre.example { margin-left: 2em; }
+div.example { margin-left: 2em; }
+
+code.extract { background-color: #F5F6A2; }
+pre.extract { margin-left: 2em; background-color: #F5F6A2;
+  border: 1px solid #E1E28E; }
+
+p.function { }
+.attribute { margin-left: 2em; }
+.attribute dt { float: left; font-style: italic;
+  padding-right: 1ex; }
+.attribute dd { margin-left: 0em; }
+
+blockquote.std { color: #000000; background-color: #F1F1F1;
+  border: 1px solid #D1D1D1;
+  padding-left: 0.5em; padding-right: 0.5em; }
+blockquote.stddel { text-decoration: line-through;
+  color: #000000; background-color: #FFEBFF;
+  border: 1px solid #ECD7EC;
+  padding-left: 0.5empadding-right: 0.5em; ; }
+
+blockquote.stdins { text-decoration: underline;
+  color: #000000; background-color: #C8FFC8;
+  border: 1px solid #B3EBB3; padding: 0.5em; }
+
+blockquote pre em { font-family: normal }
+
+table { border: 1px solid black; border-spacing: 0px;
+  margin-left: auto; margin-right: auto; }
+th { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+td { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+
+</style>
+	</style>
+
+<div style="text-align: right; float: right">
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>DXXXX<br>Robert Haberlach (rh633@cam.ac.uk)<br>2016-01-16</p>
+</div>
+	
+	<h2>Permit conversions to arrays of unknown bound</h2>
+	Allow compatibility between arrays of unknown and known bound. This is analogous to evolution issue 118.
+	
+	<h3>Motivation and impact</h3>
+	<p>As of core issue 393, function parameters can be pointers or references to arrays of unknown bound. However, binding such a reference to an array of known bound isn't permitted:
+
+<pre class="extract">
+void f(int(&)[]);
+int arr[1];
+f(arr);           // Error
+</pre>
+This restriction is unjustified and should be removed. The practical impact of this change is deemed insignificant; such parameters were only allowed a while ago (with GCC not yet supporting
+them), and code using SFINAE to test this conversion is rare. 	</p>
+	
+	<h3>Proposed wording</h3>
+	
+	
+<input type="checkbox" id="hidedel">Hide deleted wording</input>
+	
+	<p>Create 4.10 [conv.ptr] &para;4 with the following content:</p>
+	<blockquote class="stdins">A prvalue of type &ldquo;pointer to array of <tt>N</tt>  <em>cv1</em> <tt>T</tt>&ldquo; can be converted to a prvalue of type
+	&ldquo;pointer to array of unknown bound of <em>cv2</em> <tt>T</tt>&ldquo;, where <em>cv2</em> is the same cv-qualification as, or greater cv-qualification than, <em>cv1</em>.
+	The result is a pointer to the array.	The null pointer value is converted to the null pointer value of the destination type.</blockquote>
+	
+	<p>Modify 8.5.3 [dcl.init.ref] &para;4 as follows:</p>
+	
+	<blockquote class="std"> Given types &ldquo;<em>cv1</em> <tt>T1</tt>&ldquo; and &ldquo;<em>cv2</em> <tt>T2</tt>&ldquo;, &ldquo;<em>cv1</em> <tt>T1</tt>&ldquo;
+	is reference-related to &ldquo;<em>cv2</em> <tt>T2</tt>&ldquo; if <tt>T1</tt> is the same type as <tt>T2</tt>, <del>or</del>
+	<tt>T1</tt> is a base class of <tt>T2</tt> <ins>or <tt>T1</tt> is an array type of unknown bound of <tt>U</tt> and <tt>T2</tt> is an
+	array type of known bound of <tt>U</tt></ins>. </blockquote>
+
+	Modify 13.3.3.1 [over.ics.best] &para;6 as indicated:
+	<blockquote class="std">
+	When the parameter has a class type and the argument expression has a derived class type,
+	the implicit conversion sequence is a derived-to-base Conversion from the derived class to the base class. <ins>When the parameter is a reference to an array of unknown bound
+	and the argument is an array of known bound, the implicit conversion sequence is a bound-strip Conversion.</ins>
+[ <em>Note</em>: There <del>is</del><ins>are</ins> no such standard conversion<ins>s</ins>; <del>this</del> derived-to-base <ins>and bound-strip</ins> Conversion<ins>s</ins> exist<del>s</del> only in the description of
+implicit conversion sequences. &mdash; <em>end note</em> ] <del>A</del> derived-to-base <ins>and bound-strip</ins> Conversion<ins>s</ins> <del>has</del><ins>have</ins> Conversion rank (13.3.3.1.1).
+	</blockquote>
+	
+	<p>Modify 13.3.3.1.4 [over.ics.ref] &para;1 as follows: </p>
+	<blockquote class="std">
+	When a parameter of reference type binds directly (8.5.3) to an argument expression, the implicit conversion
+	sequence is the identity conversion, unless
+	<ul>
+		<li>the argument expression has a type that is a derived class of the
+		parameter type, in which case the implicit conversion sequence is a derived-to-base Conversion (13.3.3.1), or</li>
+		<li><ins>the argument is an array of known bound and the parameter is a reference to an
+		array of unknown bound, in which case the implicit conversion sequence is a bound-strip Conversion (13.3.3.1)</ins>.</li>
+	</ul>
+	
+	[ <em>Example:</em>
+	<pre class="example">
+	struct A {};
+	struct B : public A {} b;
+	int f(A&);
+	int f(B&);
+	int i = f(b);               // calls f(B&), an exact match, rather than
+	                            // f(A&), a conversion
+	                            
+	<ins>int g(int(&)[]);</ins>
+	<ins>int g(int(&)[5]);</ins>
+	<ins>int arr[5];</ins>
+	<ins>int j = g(arr);</ins>             <ins>// calls g(int(&)[5]), an exact match, rather</ins>
+	                            <ins>// than f(int(&)[]), a conversion</ins>
+	
+	</pre>	&mdash; <em>end example</em> ]
+	
+	If the parameter binds directly to the result of applying a conversion function to the
+	argument expression, the implicit conversion sequence is a user-defined conversion sequence (13.3.3.1.2),
+	with the second standard conversion sequence <del>either</del> an identity conversion <del>or</del>, <ins>unless</ins>
+	<ul>
+		<li><del>if</del> the conversion function returns an entity of a type that is a derived class of the parameter type,
+		<ins>in which case the standard conversion sequence is</ins> a derived-to-base Conversion<ins>, or</ins></li>
+		<li><ins> the conversion function returns a reference to an array of known bound and the parameter is a reference to an array of unknown bound,
+		<ins>in which case the standard conversion sequence is</ins> a bound-strip Conversion</ins>.</li>
+	</ul>	
+	</blockquote>
+	
+	Add "bound-strip" to the Index in [xref], unter "conversion" (similar to derived-to-base).
+</html>
