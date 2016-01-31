@@ -1,0 +1,113 @@
+<html> 
+	<style type="text/css">
+<style type="text/css">
+
+body { color: #000000; background-color: #FFFFFF; }
+ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
+del, del * { text-decoration:line-through; background-color:#FFA0A0 }
+#hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+
+p.example { margin-left: 2em; }
+pre.example { margin-left: 2em; }
+div.example { margin-left: 2em; }
+
+code.extract { background-color: #F5F6A2; }
+pre.extract { margin-left: 2em; background-color: #F5F6A2;
+  border: 1px solid #E1E28E; }
+
+p.function { }
+.attribute { margin-left: 2em; }
+.attribute dt { float: left; font-style: italic;
+  padding-right: 1ex; }
+.attribute dd { margin-left: 0em; }
+
+blockquote.std { color: #000000; background-color: #F1F1F1;
+  border: 1px solid #D1D1D1;
+  padding-left: 0.5em; padding-right: 0.5em; }
+blockquote.stddel { text-decoration: line-through;
+  color: #000000; background-color: #FFEBFF;
+  border: 1px solid #ECD7EC;
+  padding-left: 0.5empadding-right: 0.5em; ; }
+
+blockquote.stdins { text-decoration: underline;
+  color: #000000; background-color: #C8FFC8;
+  border: 1px solid #B3EBB3; padding: 0.5em; }
+
+blockquote pre em { font-family: normal }
+
+table { border: 1px solid black; border-spacing: 0px;
+  margin-left: auto; margin-right: auto; }
+th { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+td { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+  
+p.grammarlhs { font-style:italic; margin-bottom: 0; margin-top: 0 }
+p.grammarrhs { font-style:italic; margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarlhs tt { font-style:normal }
+p.grammarrhs tt { font-style:normal }
+
+
+</style>
+	</style>
+
+<div style="text-align: right; float: right">
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-01-31</p>
+</div>
+
+<h1>Querying the alignment of an object</h1>
+This is analogous to evolution issue 98.<sup><a href="#EWG98">EWG98</a></sup>
+
+<h2>Motivation</h2>
+<p>The <tt>alignas</tt> specifier is applicable to objects, affecting their alignment requirement but not their type.
+It is therefore currently not possible to determine an object's alignment requirement. This paper proposes to permit application of <tt>alignof</tt> to objects and references.</p>
+
+<h2>Proposed wording</h2>
+Modify 3.11 [basic.align] &para;2 as indicated:
+<blockquote class="std">
+<ins>When the <tt>alignof</tt> operator is applied to an object, the result takes into account whether that object is a subobject or a complete object. </ins>
+<ins>When applied to a type,</ins> the result of the <tt>alignof</tt> operator reflects the alignment requirement <del>of the type</del> in the complete-object case.
+</blockquote>
+
+Augment 3.11 [basic.align] &para;6 as indicated:
+<blockquote class="std">
+The alignment requirement of a complete type <ins>or object thereof</ins> can be queried using an alignof expression (5.3.6).
+</blockquote>
+
+Augment 5.3 [expr.unary] &para;1 as indicated:
+<blockquote class="std">
+<p class="grammarlhs">unary-expression:</p>
+<p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
+<p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+</blockquote>
+
+Modify 5.3.6 [expr.alignof] as indicated:
+<blockquote class="std">
+<ol><li>An <tt>alignof</tt> expression yields the alignment requirement of its operand <del>type</del>. <del>The operand shall be a</del> <ins>If the operand is a </ins> <em>type-id</em>
+<ins>, it shall represent</ins><del>representing</del> a complete object type, or an array thereof, or a reference to one of those types.
+<ins>Otherwise, the operand shall be an <em>id-expression</em> that names an object of complete object type or a reference to such a type.</ins></li>
+<li value=3>When <tt>alignof</tt> is applied to a <ins>reference or</ins> reference type, the result is the alignment of the referenced type. When
+<tt>alignof</tt> is applied to an array type, the result is the alignment of the element type.
+<ins>When <tt>alignof</tt> is applied to an object, the result is the object's alignment requirement (7.6.2).</ins></li>
+</ol>
+</blockquote>
+
+Augment 14.6.2.2 [temp.dep.expr] &para;4 as indicated:
+<blockquote class="std">
+Expressions of the following forms are never type-dependent (because the type of the expression cannot be dependent):
+<p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
+<p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+</blockquote>
+
+Augment 14.6.2.3 [temp.dep.constexpr] &para;2 as indicated:
+<blockquote class="std">
+Expressions of the following form are value-dependent if the <em>unary-expression</em><ins>, <em>id-expression</em></ins> or <em>expression</em> is type-dependent
+or the <em>type-id</em> is dependent:
+<p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
+<p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+</blockquote>
+
+<h2><a id="References">References</a></h2>
+<p>[<a id="EWG98">EWG98</a>] &ldquo;[tiny] Core issue 1008, Querying the alignment of an object&ldquo;: <a href="http://wg21.link/ewg98">wg21.link/ewg98</a></p>
+	
+</html>
