@@ -95,15 +95,16 @@ Modify 5.3.6 [expr.alignof] as indicated:
 Augment 14.6.2.2 [temp.dep.expr] &para;4 as indicated:
 <blockquote class="std">
 Expressions of the following forms are never type-dependent (because the type of the expression cannot be dependent):
+<p class="grammarrhs">[&hellip;]</p>
 <p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
 <p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+<p class="grammarrhs">[&hellip;]</p>
 </blockquote>
 
-Augment 14.6.2.3 [temp.dep.constexpr] &para;2 as indicated:
+Augment 14.6.2.3 [temp.dep.constexpr] &para;4 as indicated:
 <blockquote class="std">
-Expressions of the following form are value-dependent if the <em>unary-expression</em><ins>, <em>id-expression</em></ins> or <em>expression</em> is type-dependent
-or the <em>type-id</em> is dependent:
-<p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
+Expressions of the following form are value-dependent:
+<p class="grammarrhs">[&hellip;]</p>
 <p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
 </blockquote>
 
