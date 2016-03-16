@@ -52,7 +52,7 @@ p.grammarrhs tt { font-style:normal }
 	</style>
 
 <div style="text-align: right; float: right">
-<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-01-29</p>
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-03-14</p>
 </div>
 	
 	<h2><tt>template</tt> keyword in <em>unqualified-id</em>s</h2>
@@ -102,14 +102,7 @@ to a template <ins>or be prefixed by the <tt>template</tt> keyword</ins>.</block
 	</blockquote>
 	
 	<p>Augment 14.2 [temp.names] &para;4 as indicated:</p>
-	<blockquote class="std">
-	When the name of a member template specialization appears after <tt>.</tt> or <tt>-></tt> in a <em>postfix-expression</em> or after a <em>nested-name-specifier</em> in a
-	<em>qualified-id</em>, and the object expression of the postfix-expression is type-dependent or the <em>nested-name-specifier</em> in the <em>qualified-id</em> refers to a
-	dependent type, but the name is not a member of the current instantiation (14.6.2.1), the member template name must be prefixed by the keyword <tt>template</tt>.
-	Otherwise the name is assumed to name a non-template.
-	<ins>Similarly, when the <em>postfix-expression</em> of a function call contains a <em>template-id</em> and the template name is not known to refer to a template,
-	the name is assumed to name a non-template unless the <em>template-id</em> is qualified by the keyword <tt>template</tt>.</ins>
-	
+	<blockquote class="std"> [&hellip;]	
 	[ <em>Example</em>:
 <pre class="example">
 struct X {
@@ -158,6 +151,9 @@ struct E {
 	dependent on a <em>template-parameter</em>, or <del>the use does not appear in the scope of a template</del> <ins>the subsequent name would be found to refer to  a template via 
 	unqualified name lookup (3.4.1)</ins>. &mdash;<em>end note</em> ]</blockquote>
 	<p>NB: The first note refers to temploids and should stay as is.</p>
+
+<h2>Acknowledgments</h2>
+The author would like to thank Daveed Vandevoorde for assistance in preparing the wording.
 
 <h2><a id="References">References</a></h2>
 <p>[<a id="CWG1794">CWG1794</a>] &ldquo;<tt>template</tt> keyword and alias templates&ldquo;: <a href="http://wg21.link/cwg1794">wg21.link/cwg1794</a></p>

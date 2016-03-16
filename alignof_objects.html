@@ -52,7 +52,7 @@ p.grammarrhs tt { font-style:normal }
 	</style>
 
 <div style="text-align: right; float: right">
-<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-01-31</p>
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-03-15</p>
 </div>
 
 <h1>Querying the alignment of an object</h1>
@@ -60,7 +60,7 @@ This is analogous to evolution issue 98.<sup><a href="#EWG98">EWG98</a></sup>
 
 <h2>Motivation</h2>
 <p>The <tt>alignas</tt> specifier is applicable to objects, affecting their alignment requirement but not their type.
-It is therefore currently not possible to determine an object's alignment requirement. This paper proposes to permit application of <tt>alignof</tt> to objects and references.</p>
+It is therefore currently not possible to determine an object's actual alignment requirement. This paper proposes to permit application of <tt>alignof</tt> to objects and references.</p>
 
 <h2>Proposed wording</h2>
 Modify 3.11 [basic.align] &para;2 as indicated:
@@ -69,9 +69,9 @@ Modify 3.11 [basic.align] &para;2 as indicated:
 <ins>When applied to a type,</ins> the result of the <tt>alignof</tt> operator reflects the alignment requirement <del>of the type</del> in the complete-object case.
 </blockquote>
 
-Augment 3.11 [basic.align] &para;6 as indicated:
+Modify 3.11 [basic.align] &para;6 as indicated:
 <blockquote class="std">
-The alignment requirement of a complete type <ins>or object thereof</ins> can be queried using an <tt>alignof</tt> expression (5.3.6).
+The alignment requirement of a complete type<ins>, object thereof or reference to such a type</ins> can be queried using an <tt>alignof</tt> expression (5.3.6).
 </blockquote>
 
 Augment 5.3 [expr.unary] &para;1 as indicated:
@@ -79,16 +79,16 @@ Augment 5.3 [expr.unary] &para;1 as indicated:
 <p class="grammarlhs">unary-expression:</p>
 <p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
 <p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+<p class="grammarrhs"><ins><tt>alignof </tt> id-expression </ins></p>
 </blockquote>
 
 Modify 5.3.6 [expr.alignof] as indicated:
 <blockquote class="std">
-<ol><li>An <tt>alignof</tt> expression yields the alignment requirement of its operand <del>type</del>. <del>The operand shall be a</del> <ins>If the operand is a </ins> <em>type-id</em>
-<ins>, it shall represent</ins><del>representing</del> a complete object type, or an array thereof, or a reference to one of those types.
-<ins>Otherwise, the operand shall be an <em>id-expression</em> that names an object of complete object type or a reference to such a type.</ins></li>
+<ol><li>An <tt>alignof</tt> expression yields the alignment requirement of its operand <del>type</del><ins>. If the operand is a type, it shall represent</ins><del>representing</del> a complete object type, or an array thereof, or a reference to one of those types.
+<ins>Otherwise, the operand shall be a (possibly parenthesized) <em>id-expression</em> that names an object of complete type or a reference to such a type.</ins></li>
 <li value=3>When <tt>alignof</tt> is applied to a <ins>reference or</ins> reference type, the result is the alignment of the referenced type. When
 <tt>alignof</tt> is applied to an array type, the result is the alignment of the element type.
-<ins>When <tt>alignof</tt> is applied to an object, the result is the object's alignment requirement (7.6.2).</ins></li>
+<ins>When <tt>alignof</tt> is applied to an object, the result is the object's alignment requirement (7.6.2). </ins></li>
 </ol>
 </blockquote>
 
@@ -98,14 +98,16 @@ Expressions of the following forms are never type-dependent (because the type of
 <p class="grammarrhs">[&hellip;]</p>
 <p class="grammarrhs"><tt>alignof (</tt> type-id <tt>)</tt></p>
 <p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+<p class="grammarrhs"><ins><tt>alignof </tt> id-expression </ins></p>
 <p class="grammarrhs">[&hellip;]</p>
 </blockquote>
 
 Augment 14.6.2.3 [temp.dep.constexpr] &para;4 as indicated:
-<blockquote class="std">
+<blockquote class="stdins">
 Expressions of the following form are value-dependent:
-<p class="grammarrhs">[&hellip;]</p>
-<p class="grammarrhs"><ins><tt>alignof (</tt> id-expression <tt>)</tt></ins></p>
+<p class="grammarrhs"><em>[&hellip;]</em></p>
+<p class="grammarrhs"><tt>alignof (</tt> id-expression <tt>)</tt></p>
+<p class="grammarrhs"><tt>alignof </tt> id-expression </p>
 </blockquote>
 
 <h2><a id="References">References</a></h2>
