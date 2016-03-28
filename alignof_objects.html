@@ -85,14 +85,14 @@ Modify 5.3.6 [expr.alignof] as indicated:
 <ol><li>An <tt>alignof</tt> expression yields the alignment requirement of its operand <del>type</del><ins>.
 If the operand is a type, it shall represent</ins><del>representing</del> a complete object type, or an array thereof, or a reference to one of those types.
 <ins>Otherwise, the operand shall be a possibly parenthesized <em>postfix-expression</em> that is an <em>id-expression</em> or class member access (5.2.5 [expr.ref]).
-The <em>postfix-expression</em> shall name a variable or class data member. The expression is an unevaluated operand (clause 5 [expr]). </ins></li>
+The <em>postfix-expression</em> shall designate a variable or class data member. The expression is an unevaluated operand (clause 5 [expr]). </ins></li>
 <li> The result is an integral constant of type <tt>std::size_t</tt>.</li>
 <li>
 When <tt>alignof</tt> is applied to a reference type, the result is the alignment of the referenced type. When
 <tt>alignof</tt> is applied to an array type, the result is the alignment of the element type. 
 <li><ins>When the operand is a <em>postfix-expression</em> <tt>e</tt>, the result is determined as follows: 
 <ul>
-<li>If <tt>e</tt> is an object and any preceding declarations of that object have an <em>alignment-specifier</em> (7.6.2 [dcl.align]), the result is the alignment specified by those declarations.
+<li>If <tt>e</tt> designates an entity of object type, and any preceding declarations of that entity have an <em>alignment-specifier</em> (7.6.2 [dcl.align]), the result is the alignment specified by those declarations.
 [<em>Note:</em> All declarations of an entity that have an <em>alignment-specifier</em> must specify equivalent alignment; see 7.6.2 [dcl.align]. <em>&mdash;end note</em>] </li>
 <li>Otherwise, the result is <tt>alignof(decltype(e))</tt>. </li></ul>
 [<em>Note:</em> As is the case with <tt>noexcept</tt>, subsequent applications of <tt>alignof</tt> to the same entity may yield different values. <em>&mdash; end note</em>]</ins></li>
