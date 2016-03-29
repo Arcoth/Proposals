@@ -46,54 +46,69 @@ td { text-align: left; vertical-align: top;
 	</style>
 
 <div style="text-align: right; float: right">
-<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-01-28</p>
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>PXXXXR0<br>Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>2016-03-29</p>
 </div>
 	
 	<h2>Permit conversions to arrays of unknown bound</h2>
-	Allow compatibility between arrays of unknown and known bound. This is analogous to evolution issue 118.
+	Permit conversions of arrays of known bound to pointers or references to arrays of unknown bound. This is analogous to evolution issue 118.<sup><a href="#EWG118">EWG118</a></sup>
 	
 	<h3>Motivation and impact</h3>
-	<p>As of core issue 393, function parameters can be pointers or references to arrays of unknown bound. However, binding such a reference to an array of known bound isn't permitted:
+	<p>As of core issue 393,<sup><a href="#CWG393">CWG393</a></sup> function parameters can be pointers or references to arrays of unknown bound.
+	 However, binding such a parameter to an array of known bound isn't permitted:
 
 <pre class="extract">
 void f(int(&)[]);
 int arr[1];
-f(arr);           // Error
-</pre>
-This restriction is unjustified and should be removed. The practical impact of this change is deemed insignificant; such parameters were only allowed a while ago (with GCC not yet supporting
-them), and code using SFINAE to test this conversion is rare. </p>
 
-	<h3>Design decisions</h3>
-	<h4>Ranking in overload resolution</h4>
+f(arr);            // Error
+int(&ref)[] = arr; // Error
+</pre>
+This restriction is unjustified and should be removed. The practical impact of this extension is deemed insignificant; such parameters were only allowed a while ago
+(with GCC not yet supporting them), and SFINAE-dependent code that is negatively influenced by this change is most certainly not existent.</p>
+
+	<h3>Approach and decisions</h3>
+	<p>The initialization of pointers to arrays of unknown bound will be allowed by introducing a corresponding pointer conversion.
+	Reference initialization rules will be adjusted by modifying reference compability. Such bindings have Exact Match rank.<br><br>
+	
+	We also propose to allow list-initialization for references to arrays of unknown bound by deducing the array temporary's size. </p>
+	
+	<h4>Ranking of reference initialization conversions</h4>
 	Consider
 	
 <pre class="extract">
-void f(int(&)[]);      // (1)
-void f(int(&)[1]);     // (2)
+void f(int(&)[]),      // (1)
+     f(int(&)[1]),     // (2)
+     f(int*);          // (3)
 
-void g(int(&)[]);      // (1)
-void g(int*);          // (3)
-
-void h(int(*)[]);      // (a)
-void h(int(*)[1]);     // (b)
+void h(int(*)[]),      // (a)
+     h(int(*)[1]);     // (b)
 </pre>
-<ul>
-<li>(1) should rank worse than (2) if the latter is viable, and</li>
-<li>(1) should rank worse than (3) if the argument has known bound, and</li>
-<li>(1) should rank equally well as (3) if the argument's bound is unknown (similar to (2) and (3)'s behavior with an argument of known bound), and </li>
-<li>(a) should rank worse than (b) if the latter is viable.</li>
-</ul>
-It is therefore suggestive to give both introduced conversions Conversion rank. We also propose to allow list-initialization and introduce corresponding rules in overload resolution:
+
+(2) and (b) should clearly be better than (1) and (a), respectively, as the former overloads are more restricted. <br><br>
+
+Furthermore, (3) should be equal to (1) (as it is to (2)). To maintain this ambiguity, (1) must be given Exact Match rank. We do not favor this ordering and feel that (3) is conceptually
+less specialized than (2) and even (1); however, consistency is more important than fixing part of the problem for arrays of unknown bounds.<br><br>
+
+Finally, (a) should be worse than (b), which is implied by (a) necessitating a pointer conversion in that case.
+
+<h4>Ranking of list-initialization sequences</h4>
+We also propose to allow list-initialization and introduce corresponding rules in overload resolution:
 <pre class="extract">
-int b(int(&&)[]);    // #1
-int b(int(&&)[1]);   // #2
-int b(int(&&)[2]);   // #3
+int b(int   (&&)[] );   // #1
+int b(long  (&&)[] );   // #2
+
+int b(int   (&&)[1]);   // #3
+int b(long  (&&)[1]);   // #4
+
+int b(int   (&&)[2]);   // #5
 
 b({1});</pre>
 Here,
-<ul><li>#1 should rank worse than #2, and</li>
-<li>#1 and #2 should both rank better than #3, as they necessitate a smaller array temporary.</li></ul>
-The latter is already partly covered by core issue 1307.
+<ul><li>#1 and #3 should rank better than both #2 and #4, as no promotion is necessitated.</li>
+<li>#1 should rank worse than #3, being far less specialized.</li>
+<li>#1 and #2 should rank better than #5, as the latter requires a larger array temporary.<br>
+(#3 and #4 also rank better than #5 for the same reason, which has been dealt with by core issue 1307,<sup><a href="#CWG1307">CWG1307</a></sup> whose resolution this paper extends).</li></ul>
+For these reasons, the size of the referenced array is the primary criterion, followed by the worst performed conversion and finally the known/unknown bound tie-breaker.
 	
 	<h3>Proposed wording</h3>
 	
@@ -101,8 +116,8 @@ The latter is already partly covered by core issue 1307.
 <input type="checkbox" id="hidedel">Hide deleted wording</input>
 	
 	<p>Create 4.10 [conv.ptr] &para;4 with the following content:</p>
-	<blockquote class="stdins">A prvalue of type &ldquo;pointer to array of <tt>N</tt>  <em>cv1</em> <tt>T</tt>&ldquo; can be converted to a prvalue of type
-	&ldquo;pointer to array of unknown bound of <em>cv2</em> <tt>T</tt>&ldquo;, where <em>cv2</em> is the same cv-qualification as, or greater cv-qualification than, <em>cv1</em>.
+	<blockquote class="stdins">A prvalue of type &ldquo;pointer to array of <tt>N</tt>  <em>cv</em> <tt>T</tt>&ldquo; can be converted to a prvalue of type
+	&ldquo;pointer to array of unknown bound of <em>cv</em> <tt>T</tt>&ldquo;.
 	The result is a pointer to the array.	The null pointer value is converted to the null pointer value of the destination type.</blockquote>
 	
 	<p>Modify 8.5.3 [dcl.init.ref] &para;4 as follows:</p>
@@ -120,6 +135,7 @@ Otherwise, if <tt>T</tt> is a reference type, a prvalue temporary <del>of the ty
 depending on the kind of initialization for the reference, and the reference is bound to that temporary.
 <ins>The type of the temporary is either the type referenced by <tt>T</tt> or, if <tt>T</tt> is "array of unknown bound of <tt>U</tt>", the type "array of <tt>N U</tt>", where <tt>N</tt> is the number of elements in the initializer list.</ins></blockquote>
 
+<!--
 	Modify 13.3.3.1 [over.ics.best] &para;6 as indicated:
 	<blockquote class="std">
 	When the parameter has a class type and the argument expression has a derived class type,
@@ -128,7 +144,9 @@ depending on the kind of initialization for the reference, and the reference is 
 [ <em>Note</em>: There <del>is</del><ins>are</ins> no such standard conversion<ins>s</ins>; <del>this</del> derived-to-base <ins>and bound-strip</ins> Conversion<ins>s</ins> exist<del>s</del> only in the description of
 implicit conversion sequences. &mdash; <em>end note</em> ] <del>A</del> derived-to-base <ins>and bound-strip</ins> Conversion<ins>s</ins> <del>has</del><ins>have</ins> Conversion rank (13.3.3.1.1).
 	</blockquote>
+-->
 	
+<!--
 	<p>Modify 13.3.3.1.4 [over.ics.ref] &para;1 as follows: </p>
 	<blockquote class="std">
 	When a parameter of reference type binds directly (8.5.3) to an argument expression, the implicit conversion
@@ -166,25 +184,54 @@ implicit conversion sequences. &mdash; <em>end note</em> ] <del>A</del> derived-
 		<ins>in which case the standard conversion sequence is</ins> a bound-strip Conversion</ins>.</li>
 	</ul>	
 	</blockquote>
+-->
 	
 	<p>Modify 13.3.3.1.5 [over.ics.list] &para;5 as follows:</p>
 	<blockquote class="std">
 	Otherwise, if the parameter type is &ldquo;array of <tt>N X</tt>&ldquo; <ins>or &ldquo;array of unknown bound of <tt>X</tt>&ldquo;</ins>, if there exists an implicit conversion sequence <del>for each
-element of the arrayfrom the corresponding</del> <ins>from each</ins> element of the initializer list (<del>or</del><ins>and</ins> from <tt>{}</tt> if <del>there is no such
+element of the array from the corresponding</del> <ins>from each</ins> element of the initializer list (<del>or</del><ins>and</ins> from <tt>{}</tt> if <del>there is no such
 element</del><ins> <tt>N</tt> exceeds the number of elements in the initializer list</ins>) <ins>to <tt>X</tt></ins>, the implicit conversion sequence is the worst such implicit conversion sequence.
 	</blockquote>
 	
-	<p>Create 13.3.3.2 [over.ics.rank] &para;(3.1.3) with the following content (and append "or if not that" to the previous bullet):</p>
+	<p>Augment 13.3.3.2 [over.ics.rank] &para;(3.1) as indicated:</p>
+	<blockquote class="std">
+	List-initialization sequence <tt>L1</tt> is a better conversion sequence than list-initialization sequence <tt>L2</tt> if
+	<ul>
+	<li><tt>L1</tt> converts to <tt>std::initializer_list&lt;X&gt;</tt> for some <tt>X</tt> and <tt>L2</tt> does not, or, if not that,</li>
+	<li><tt>L1</tt> converts to type &ldquo;array of <tt>N1 T</tt>&rdquo;, <tt>L2</tt> converts to type &ldquo;array of <tt>N2 T</tt>&rdquo;, and <tt>N1</tt> is smaller than <tt>N2</tt>, <ins>or if not that,</ins></li>
+	<ins><li><tt>L1</tt> converts to an array of unknown bound and <tt>L2</tt> converts to type &ldquo;array of <tt>N X</tt>&ldquo;, where <tt>N</tt> is greater than the number of elements in the initializer list,</li>
+</ins>
+	</ul>
+	even if one of the other rules in this paragraph would otherwise apply. [<em>Example:</em>&hellip;<em>&mdash; end example</em>]
+	</blockquote>
+	
+	<p>Create 13.3.3.2 [over.ics.rank] &para;5 with the following content:</p>
 	<blockquote class="stdins">
-<tt>L1</tt> converts to an array of unknown bound and <tt>L2</tt> convers to type &ldquo;array of <tt>N X</tt>&ldquo;, where <tt>N</tt> is greater than the number of elements in the initializer list,
-or if not that, </blockquote>
+	If none of the previous rules in this section apply, two list-initialization sequences are indistiguishable except that 
+	a list-initialization sequence that converts to an array of known bound is better than one that converts to an array of unknown bound.
+	[<em>Example:</em>
+	<pre class="example">
+void f(int    (&&)[] ),    // #1
+     f(double (&&)[] ),    // #2
+     f(int    (&&)[2]);    // #3
+
+f( {1} );          // Calls #1
+f( {1.0} );        // Calls #2
+f( {1.0, 2.0} );   // Calls #2: Identity conversion is better than floating-integral conversion
+f( {1, 2} );       // Calls #3: Converting to array of known bound is better
+</pre>
+	<em>&mdash; end example</em>]
+	</blockquote>
 	
-	<p>Create 13.3.3.2 [over.ics.rank] &para;(3.1.4) with the following content:</p>
-	<blockquote class="stdins"><tt>L1</tt> converts to an array of known bound and <tt>L2</tt> converts to an array of unknown bound,</blockquote>
-	
-	
+<!--
 	Add "bound-strip" to the Index in [xref], unter "conversion" (similar to derived-to-base).
+-->
 	
 	<h3>Acknowledgments</h3>
 	<p>The author would like to thank David Krauss for guidance and support.</p>
+	
+	<h3>References</h3>
+<p>[<a id="EWG118">EWG118</a>] &ldquo;[tiny] Allow conversion from pointer to array of known bound to pointer to array of unknown bound&ldquo;: <a href="http://wg21.link/ewg118">wg21.link/ewg118</a></p>
+<p>[<a id="CWG393">CWG393</a>] &ldquo;Pointer to array of unknown bound in template argument list in parameter&ldquo;: <a href="http://wg21.link/cwg393">wg21.link/cwg393</a></p>
+<p>[<a id="CWG1307">CWG1307</a>] &ldquo;Overload resolution based on size of array <em>initializer-list</em>&ldquo;: <a href="http://wg21.link/cwg1307">wg21.link/cwg1307</a></p>
 </html>
