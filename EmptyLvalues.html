@@ -1,0 +1,490 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  
+  <style type="text/css">
+<style type="text/css">
+
+body { color: #000000; background-color: #FFFFFF; }
+ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
+del, del * { text-decoration:line-through; background-color:#FFA0A0 }
+#hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+
+p.example { margin-left: 2em; }
+pre.example { margin-left: 2em; }
+div.example { margin-left: 2em; }
+
+code.extract { background-color: #F5F6A2; }
+pre.extract { margin-left: 2em; background-color: #F5F6A2;
+  border: 1px solid #E1E28E; }
+
+p.function { }
+.attribute { margin-left: 2em; }
+.attribute dt { float: left; font-style: italic;
+  padding-right: 1ex; }
+.attribute dd { margin-left: 0em; }
+
+blockquote.std { color: #000000; background-color: #F1F1F1;
+  border: 1px solid #D1D1D1;
+  padding-left: 0.5em; padding-right: 0.5em; }
+blockquote.stddel { text-decoration: line-through;
+  color: #000000; background-color: #FFEBFF;
+  border: 1px solid #ECD7EC;
+  padding-left: 0.5empadding-right: 0.5em; ; }
+
+blockquote.stdins { 
+  color: #000000; background-color: #C8FFC8;
+  border: 1px solid #B3EBB3; padding: 0.5em; }
+
+blockquote pre em { font-family: normal }
+
+table { border: 1px solid black; border-spacing: 0px;
+  margin-left: auto; margin-right: auto; }
+th { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+td { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+  
+
+ul { list-style-type: none; }
+a { text-decoration: none; }
+
+ul > li:before {
+	content: "\2014";
+	position: absolute;
+	margin-left: -1.5em; 
+}
+
+  </style>
+</head><body>
+<div style="text-align: right; float: right;">
+<p>ISO/IEC JTC1 SC22 WG21, Core Working Group<br>
+PxxxxR0<br>
+Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
+2016-03-31</p>
+</div>
+
+<h2>Fine grained expression classification and reference semantics</h2>
+
+This paper proposes to introduce the notion of an empty lvalue as
+discussed in core issue 232.<sup><a href="#CWG232">CWG232</a></sup> The
+wording is partly adapted from the proposed wording in that core issue
+and
+core issue 453.<sup><a href="#CWG453">CWG453</a><br>
+
+
+<br>
+</sup> This proposal resolves both these core issues and core issue 504.<sup><a href="#CWG504">CWG504</a></sup>
+<h3>Motivation</h3>
+
+<p>The standard is unclear about its treatment of indirection through
+null pointers and pointers past the end of an object. <tt>typeid</tt>
+is specified to treat lvalues created by dereferencing a null pointer,
+and the common idiom <tt>&amp;arr[len]</tt> is currently undefined.
+The standard is also unclear about its distinction of lvalues referring
+to objects and merely storage.<br>
+<br>
+
+</p>
+
+
+<h3>Proposed changes</h3>
+
+We propose four major changes that do not affect the semantics of any
+program:<br>
+
+<ol>
+<li>A glvalue can be <span style="font-style: italic;">assigned</span>,
+    <span style="font-style: italic;">null</span>, <span style="font-style: italic;">invalid</span> or <span style="font-style: italic;">past the end of</span> an object, exactly
+like pointer values (as formalized in P0137).<br>
+
+
+  </li><li>Certain uses of unassigned lvalues are now defined, in particular
+Lvalue Transformations and the unary <tt>&amp;</tt> operator.</li><li> A reference shall not be
+initialized with its own name. This makes code ill-formed with a
+diagnostic required - note that all common implementations already
+diagnose this as a warning. For further discussion on this topic, see
+also SG12's mailing list.<sup><a href="#UB504">UB504</a></sup><br>
+  </li><li>References have a subset of glvalues' assignment categories: <span style="font-style: italic;">Assigned object/function/storage reference</span>,
+or <span style="font-style: italic;">invalid reference</span>.</li>
+</ol>
+
+These classifications allow for much more rigorous arguing about
+programs' well-definedness. <br>
+
+
+<h3>Proposed wording</h3>
+
+This wording is relative to N4567 and P0137R0.<sup><a href="#P0137R0">P0137R0</a></sup>
+
+
+<br>
+<br>
+<input id="hidedel" type="checkbox">Hide deleted wording
+
+
+<p>3.7 [basic.stc] ¶3 (as shown in P0137):</p>
+
+<blockquote class="std"> When the end of the duration of a region of
+storage is reached, the values of all pointers representing the address
+of any part of the deallocated storage become invalid pointer values
+([basic.compound])<ins>,
+references designating any part of the deallocated storage become
+invalid references (8.3.2 [dcl.ref]) and all glvalues designating part of
+the deallocated storage become invalid glvalues (3.10
+[basic.lval]).&nbsp;</ins>Indirection through an
+invalid pointer value [&#8230;]</blockquote>
+<p>3.7.4.2 [basic.stc] ¶4:</p>
+<blockquote class="std">If the argument given to a deallocation
+function in the standard library is a pointer that is not the null
+pointer value (4.10), the deallocation function shall deallocate the
+storage referenced by the pointer, rendering invalid all pointers <ins>and references</ins> referring to any part of the deallocated storage.</blockquote>
+3.8 [basic.life] ¶7:
+
+<blockquote class="std">Similarly, before the lifetime of an object has
+started but after the storage which the object will occupy has been
+allocated or, after the lifetime of an object has ended and before the
+storage which the object
+occupied is reused or released, any glvalue that refers to the original
+object <ins>is an assigned storage glvalue and</ins> may be used but only in limited ways. For an object under construction or destruction, see 12.7. <del>Otherwise, such a glvalue refers to
+allocated storage (3.7.4.2), and using the</del> <ins>Using </ins> properties of <del>the</del> <ins>an assigned storage</ins> glvalue that do not depend on its value is well-defined.
+
+</blockquote>
+<p>3.8 [basic.life] ¶8:</p>
+<p>
+
+
+</p>
+<blockquote class="std">If, after the lifetime of an object has ended
+and before the storage which the object occupied is reused or released,
+a new object is created at the storage location which the original
+object occupied,
+a pointer that pointed to the original object, a<ins>n assigned storage</ins> reference that referred to the original object, or the name of the original object will automatically refer to the new object
+<ins>(that is, become a pointer to that object, an assigned object reference and an assigned object lvalue, respectively)</ins>
+<del>and, once the lifetime of the new object has started, can be used to manipulate the new object</del>, if:<br>
+</blockquote>
+<p>(Drafting note: It makes no sense to restrict the pointer's or
+reference's permissions during construction, which is why the last
+sentence is shortened.)<br></p>
+<p>3.10 [basic.lval] ¶12:</p>
+
+
+<blockquote class="std">
+  <ul><li>An lvalue (so called, historically, because
+lvalues could
+appear on the left-hand side of an assignment expression) <del>designates
+a function or an object</del><ins>is one of the following:
+      <ul><li>an assigned lvalue (see below), </li><li>a <em>null lvalue</em> (5.3.1 [expr.unary.op]), or</li><li>an <em>lvalue past the end of</em> an object (5.3.1
+[expr.unary.op]), or</li><li>an invalid lvalue (see below).</li></ul>
+      </ins>[ <em>Example</em>: If <tt>T</tt> is an expression of
+pointer type, then <tt>*E</tt> is an <ins>assigned</ins> lvalue <del>expression</del>
+
+
+referring to the object or function to which <tt>E</tt> points<ins>,
+or is a null lvalue if <tt>E</tt> is the null pointer value</ins>. As
+another example, the result of calling a function whose return type is
+an lvalue reference is an lvalue<ins>, which could be invalid if
+the
+function returns an (invalid) reference to a local object of automatic
+storage
+duration</ins>. &#8212;<em>end example</em> ]<ins></ins> </li><li>An xvalue (an &#8220;eXpiring&#8221; value) <del>also
+refers to an
+object</del> either refers to an object, usually near the end of its
+lifetime (so that its resources may
+be moved, for example), or is invalid. Certain kinds of expressions
+involving rvalue
+references (8.3.2) yield xvalues. [ <em>Example</em>: The result of
+calling a function whose return type is an rvalue reference to an
+object type is an xvalue (5.2.2). &#8212; <em>end example</em> ] <ins>[<em>Note:</em>
+
+
+an xvalue cannot be null or past the end of an object, because
+the only way to obtain such an xvalue would bind an unassigned lvalue
+to a
+reference via
+a cast, which has undefined behavior (8.3.2 [dcl.ref]). &#8212; <em>end note</em>]</ins>
+    </li><li>A <em>glvalue</em>
+(&#8220;generalized&#8221;
+lvalue) is an lvalue or an xvalue.&nbsp;<ins></ins></li><li>An <em>rvalue</em> (so called, historically, because rvalues
+could appear on the right-hand side of an assignment expression) is an
+xvalue, a temporary object (12.2) or subobject thereof, or a valu that
+is not associated with an object.</li><li>A <em>prvalue</em> (&#8220;pure&#8221; rvalue) is an rvalue that is not an
+xvalue. <ins>Every prvalue is either an assigned object expression or
+of possibly cv-qualified <tt>void</tt> type.&nbsp;</ins>
+
+[ <em>Example</em>: The result of calling a function whose return type
+is not a reference is a prvalue. The value of a literal such as <tt>12</tt>,
+      <tt>7.3e5</tt>, or <tt>true</tt> is also a prvalue. &#8212; <em>end
+example</em> ]<br>
+
+    </li></ul>
+
+  <ins>An expression is <em>assigned</em> if it designates
+  <ul><li>a function, in which case it is an <em>assigned function</em>
+expression, or</li><li>an object during construction or destruction (12.7
+[class.cdtor]) or within its lifetime (3.8 [basic.life]), in which case
+it is an <em>assigned object</em> expression, or</li>
+    <li>an allocated region of storage (possibly occupied by an object), in which case it is an <em>assigned
+storage</em> expression. [<em>Note</em>:
+there can't be any glvalues referring to the memory occupied by a
+destroyed bit-field, because binding a reference to a bit-field is
+ill-formed, and accessing a member of an object that isn't alive is
+undefined. That is, any glvalue referring to a bit-field is an assigned
+object glvalue. &#8212; <em>end note</em>]<br></li>
+</ul>
+
+An <em>invalid</em> expression is one that referred to an object or
+region of storage that has been deallocated (3.7 [basic.stc]). Using an
+unassigned expression in a context where the language expects an
+assigned expression has undefined behavior. </ins>
+  <br>
+  <br>
+
+Every expression belongs to exactly one of the fundamental
+classifications in this taxonomy: lvalue, xvalue,
+or prvalue. This property of an expression is called its <em>value
+category</em>. <ins>Additionally, every expression belongs to exactly
+one of the classifications listed above:
+null expression (lvalues only), expression past the end of an object
+(lvalues only), assigned function expression (lvalues only), assigned
+object expression, assigned storage expression (glvalues only), or
+invalid expression (glvalues only). This runtime property
+of an expression is called its <em>assignment category</em>.</ins>
+
+</blockquote>
+4.1 [conv.lval]:<br>
+<blockquote class="std">
+A glvalue (3.10) of a non-function, non-array type <tt>T</tt> can be converted to a prvalue. If <tt>T</tt> is an incomplete type, a program that necessitates this conversion is ill-formed. <ins>If the glvalue is not an assigned object glvalue, the behavior is undefined.</ins>  [&#8230;]
+</blockquote>
+<br>
+4.2 [conv.array]:
+<blockquote class="std">An lvalue or rvalue of type &#8220;array of <tt>N T</tt>&#8221;
+or &#8220;array of unknown bound of <tt>T</tt>&#8221; can be converted to a
+prvalue of
+type &#8220;pointer to <tt>T</tt>&#8221;. <ins>If the expression refers to an
+array,</ins>
+
+
+the result is a pointer to the first element of <del>the</del><ins>that</ins>
+array. <ins>If the expression is a null lvalue, the result is the null
+pointer
+value. If the expression is an lvalue past the end of an object, the
+result is a
+pointer past the end of the object. Otherwise, the behavior is
+undefined.<br>
+  </ins></blockquote>
+
+<p>4.3 [conv.func]:</p>
+
+<blockquote class="std"> An lvalue of function type <tt>T</tt> can be
+converted to a prvalue of type &#8220;pointer to <tt>T</tt>&#8221;. <ins>If the
+lvalue is an assigned function lvalue,</ins> the result is a pointer to
+the
+function. <ins>If the lvalue is a null lvalue, the result is the null
+pointer value. Otherwise, the behavior is undefined.</ins> </blockquote>
+
+
+
+<p>5.2.5 [expr.ref] ¶4:</p>
+
+<blockquote class="std"> If <tt>E2</tt> is declared to have type
+&#8220;reference to T&#8221;, then <tt>E1.E2</tt> is an lvalue; the type of <tt>E1.E2</tt>
+is <tt>T</tt>. Otherwise,
+one of the following rules applies.
+  <ul><li>If <tt>E2</tt> is a static data member [&#8230;]</li><li>If <tt>E2</tt> is a non-static data member<ins>,
+the behavior
+is undefined if <tt>E1</tt> is not an assigned object expression.
+If</ins> <del>and</del> the type of <tt>E1</tt> is &#8220;<em>cq1 vq1</em> <tt>X</tt>&#8221;,
+and the type of <tt>E2</tt> is &#8220;<em>cq2 vq2</em> <tt>T</tt>&#8221;, [&#8230;]</li><li>If <tt>E2</tt> is a (possibly overloaded)
+member function<ins>,
+the behavior is undefined if <tt>E1</tt> is not an assigned object expression. </ins>
+
+
+Function overload resolution (13.3) is used [&#8230;]</li></ul>
+</blockquote>
+
+<p>
+5.2.8 [expr.typeid] ¶2:
+</p>
+<blockquote class="std">When <tt>typeid</tt> is applied to a<ins>n
+assigned object</ins> glvalue expression
+whose type is a polymorphic class type (10.3), the result refers to a <tt>std::type_info</tt>
+object representing the type of the most derived object (1.8) (that is,
+the dynamic type) to which the glvalue refers. If the glvalue
+expression is <del>obtained by
+applying the unary <tt>*</tt> operator to a pointer<sup>69</sup> and
+the pointer is a null pointer value (4.10)</del> <ins>a null lvalue
+(5.3.1 [expr.unary.op])</ins>, the <tt>typeid</tt> expression throws
+an exception (15.1 [except.throw]) of a type that would match a handler
+of type <tt>std::bad_typeid</tt> exception (18.7.4 [bad.typeid]). <ins>Otherwise,
+the behavior is undefined.</ins> <br>
+
+
+</blockquote>
+
+
+
+<p>5.3.1 [expr.unary.op] ¶1:</p>
+
+<blockquote class="std"> The unary <tt>*</tt> operator performs
+indirection: the expression to which it is applied shall be a pointer
+to an object <ins>or function</ins> type <ins><tt>T</tt></ins><ins>.</ins><del>,
+or a pointer to a function type</del><del>and the</del> <ins>The </ins>
+
+
+result is an lvalue <ins>of type <tt>T</tt></ins><del>
+referring to the object or function to which the expression points, if
+any</del>. <ins>If the pointer is the null pointer value, the result
+is a null lvalue. If
+the pointer is past the end of an object, the result is an lvalue past
+the end of that object. If the pointer points to an object or function,
+the result is an assigned object lvalue or assigned function lvalue,
+respectively, referring to that entity. If the pointer represents the
+address
+of allocated storage, the result is an assigned storage lvalue
+designating that region of storage. Otherwise, the
+behavior is undefined.</ins> [<em>Note</em>: a pointer to an incomplete
+type (other than <em>cv</em> <tt>void</tt>)
+can be dereferenced. The lvalue thus obtained can be used in limited
+ways (to initialize a reference, for example); this lvalue must not be
+converted to an rvalue, see 4.1 [conv.lval]. &#8212;<em>end note</em>]</blockquote>
+5.3.1 [expr.unary.op] ¶3:
+
+<blockquote class="std"> The result of the unary <tt>&amp;</tt>
+operator is a pointer to its operand. The operand shall be an lvalue or
+a <em>qualified-id</em>.
+If the operand is a <em>qualified-id</em> naming a non-static or
+variant member <tt>m</tt> of some class <tt>C</tt> with type <tt>T</tt>,
+the
+result has type &#8220;pointer to member of class <tt>C</tt> of type <tt>T</tt>&#8221;
+and is a prvalue designating <tt>C::m</tt>. Otherwise, if
+the type of the expression is <tt>T</tt>, the result has type &#8220;pointer
+to <tt>T</tt>&#8221; and is a prvalue <del>that is the address of the
+designated object (1.7) or a pointer to the designated function</del><ins>
+
+
+pointer. If the lvalue is an assigned object lvalue or assigned
+function lvalue, the result points to the designated
+object or function, respectively. If the lvalue is an assigned storage
+lvalue, the result represents the address of the designated region of
+storage.
+If the lvalue is a null lvalue, the result is the null pointer value.
+If the lvalue is past the end of an object, the result is a pointer
+past the end of that object. Otherwise, the behavior is undefined</ins>.</blockquote>
+<p>5.18 [expr.ass] ¶8:</p>
+<blockquote class="std">The assignment operator (<tt>=</tt>) and the
+compound assignment operators all group right-to-left. All require a
+modifiable lvalue as their left operand and return an lvalue referring
+to the left operand<ins>; the behavior is undefined if the lvalue is
+not an assigned object lvalue, or is an assigned storage lvalue member
+access expression (5.2.5 [expr.ref]) designating a variant member (see
+below)</ins>. The result in all cases is a bit-field if the left
+operand is a bit-field. In all cases, the assignment is sequenced after
+the value computation of the right and left operands, and before the
+value computation of the assignment expression.<br></blockquote>
+<p> </p>
+<p>(Drafting note: this refers to P0137's augmentation of [expr.ass].)<br>
+</p>
+<p>8.3.2 [dcl.ref] ¶5: </p>
+
+<blockquote class="std"> [&#8230;] <del>A reference shall be initialized to
+refer to a valid object or function.</del> <ins>A
+reference's name shall not be potentially evaluated (3.2 [odr.def]) in
+its intializer. If the expression to which a reference is directly
+bound
+is
+not an assigned expression designating either a function of an
+appropriate
+type (8.5.3 [dcl.init.ref]), or a region of storage of suitable size
+and alignment to contain an object of the referenced type (3.8
+[basic.life]), or an object residing in such storage, the behavior is
+undefined. If a reference is initialized to refer to the virtual base
+of its initializer, and its initializer is not an assigned object
+expression, the behavior is undefined. </ins>[ <em>Note</em>:
+in particular, a null reference cannot exist in a well-defined program,
+because the only way to create such a reference would be to bind it to
+a <del>&#8220;object&#8221;</del> <ins>null lvalue</ins><del>obtained by
+dereferencing a null pointer</del>, which causes undefined
+behavior. <ins>&#8212; <em>end note</em>] [<em>Note</em>: </ins>as
+described in
+9.6 [class.bit], a reference cannot be bound directly to a bit-field. <em>&#8212;
+end note</em> ]<ins> [<em>Example:</em>
+
+
+  <pre class="example">int&amp; i = true? 0 : i;      // Error: i is potentially evaluated<br><br>int&amp; j = *(int*)nullptr;   // Undefined behavior: Binding a reference to a null lvalue</pre>
+  <em>&#8212; end example</em><ins>] Any use of a reference before it is
+initialized results in undefined
+behavior. [</ins><em>Example</em>:
+  <pre class="example">extern int&amp; ir2;<br>int ir1 = ir2;         // Undefined behavior: ir2 not yet initialized<br></pre>
+
+
+  <em>&#8212; end example</em>]</ins>&nbsp; </blockquote>
+
+<ins></ins>
+<p>Create 8.3.2 [dcl.ref] ¶8:<br>
+</p>
+<blockquote class="stdins">Similar to expressions, references have assignment categories (3.10 [basic.lval]) restricted to <em>assigned function</em> reference, <em>assigned object</em> reference, <em>assigned storage</em> reference and <em>invalid reference</em>.
+As described above, if a reference is initialized to be invalid, the
+behavior is undefined.
+After initialization, the reference has the same assignment category as
+the expression it was directly bound to (that is, assigned object
+expressions correspond to assigned object references, assigned storage
+expressions to assigned storage references, and assigned function
+expressions to assigned function references). Its assignment category
+changes in the following situations:
+<ul><li>The reference is an assigned object reference and the
+designated object is destroyed. The reference becomes an assigned
+storage reference, provided the storage occupied by the original object
+has not
+simultaneously been deallocated. <br></li><li>The reference is an
+assigned object or assigned storage reference, and the storage occupied
+by the object or the designated storage, respectively, are deallocated.
+The reference becomes an invalid reference.</li><li>The reference is an
+assigned storage reference and a new object of the same cv-unqualified
+type is created in the same storage; under certain circumstances, the
+reference becomes an assigned object reference. [<em>Note</em>: see 3.8 [basic.life]. &#8212; <em>end note</em>] <br></li></ul>
+
+
+An expression whose result is <tt>r</tt>
+is a glvalue of the same assignment category (3.10 [basic.lval]) as <tt>r</tt>'s
+initializer, except that when <tt>r</tt>'s target is constructed,
+destroyed (12.7 [class.cdtor]) or has its storage deallocated (3.8
+[object.life]). When the designated storage or storage occupied by an
+object referred to is deallocated, any expression whose result is that
+reference is an invalid glvalue.
+[<em>Note</em>: this can happen in the following situations:
+  <ul><li>&nbsp;&nbsp;&nbsp;a function call whose result is a reference
+designating a block scope variable with automatic storage duration, or</li><li>&nbsp;&nbsp;&nbsp;a reference is initialized to refer to a
+temporary whose lifetime is not extended.</li></ul>
+
+
+
+
+
+
+
+&#8212; <em>end note</em> ]
+
+</blockquote>
+<h3>References</h3>
+
+<p>[<a id="CWG232">CWG232</a>] &#8220;Is indirection through a null pointer
+undefined behavior?&#8220;: <a href="http://wg21.link/cwg232">wg21.link/cwg232</a></p>
+
+
+<p>[<a id="CWG453">CWG453</a>] &#8220;References may only bind to &#8220;valid&#8221;
+objects&#8220;: <a href="http://wg21.link/cwg453">wg21.link/cwg453</a>
+
+</p>
+
+<p>[<a id="CWG453">CWG504</a>] &#8220;Should use of a variable in its own
+initializer require a diagnostic?&#8220;:
+<a href="http://wg21.link/cwg504">wg21.link/cwg504</a></p>
+
+<p>[<a id="P0137R0">P0137R0</a>] (Richard Smith) &#8220;Core Issue 1776:
+Replacement of class objects containing reference members&#8220;: <a href="http://wg21.link/P0137R0">wg21.link/P0137R0</a></p>
+
+
+<p>[<a id="UB504">UB504</a>] &#8220;[ub] Proposal: make self-initialized
+references
+ill-formed (C++17?) &#8221; <a href="http://www.open-std.org/pipermail/ub/2014-September/000506.html">open-std.org/pipermail/ub/2014-September/000506.html</a></p>
+</body></html>
