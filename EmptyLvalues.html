@@ -122,7 +122,7 @@ This wording is relative to N4567 and P0137R0.<sup><a href="#P0137R0">P0137R0</a
 <input id="hidedel" type="checkbox">Hide deleted wording
 
 
-<p>3.7 [basic.stc] ¶3 (as shown in P0137):</p>
+<p>3.7 [basic.stc] &para;3 (as shown in P0137):</p>
 
 <blockquote class="std"> When the end of the duration of a region of
 storage is reached, the values of all pointers representing the address
@@ -133,12 +133,12 @@ invalid references (8.3.2 [dcl.ref]) and all glvalues designating part of
 the deallocated storage become invalid glvalues (3.10
 [basic.lval]).&nbsp;</ins>Indirection through an
 invalid pointer value [&#8230;]</blockquote>
-<p>3.7.4.2 [basic.stc] ¶4:</p>
+<p>3.7.4.2 [basic.stc] &para;4:</p>
 <blockquote class="std">If the argument given to a deallocation
 function in the standard library is a pointer that is not the null
 pointer value (4.10), the deallocation function shall deallocate the
 storage referenced by the pointer, rendering invalid all pointers <ins>and references</ins> referring to any part of the deallocated storage.</blockquote>
-3.8 [basic.life] ¶7:
+3.8 [basic.life] &para;7:
 
 <blockquote class="std">Similarly, before the lifetime of an object has
 started but after the storage which the object will occupy has been
@@ -149,7 +149,7 @@ object <ins>is an assigned storage glvalue and</ins> may be used but only in lim
 allocated storage (3.7.4.2), and using the</del> <ins>Using </ins> properties of <del>the</del> <ins>an assigned storage</ins> glvalue that do not depend on its value is well-defined.
 
 </blockquote>
-<p>3.8 [basic.life] ¶8:</p>
+<p>3.8 [basic.life] &para;8:</p>
 <p>
 
 
@@ -165,7 +165,7 @@ a pointer that pointed to the original object, a<ins>n assigned storage</ins> re
 <p>(Drafting note: It makes no sense to restrict the pointer's or
 reference's permissions during construction, which is why the last
 sentence is shortened.)<br></p>
-<p>3.10 [basic.lval] ¶12:</p>
+<p>3.10 [basic.lval] &para;12:</p>
 
 
 <blockquote class="std">
@@ -284,7 +284,7 @@ pointer value. Otherwise, the behavior is undefined.</ins> </blockquote>
 
 
 
-<p>5.2.5 [expr.ref] ¶4:</p>
+<p>5.2.5 [expr.ref] &para;4:</p>
 
 <blockquote class="std"> If <tt>E2</tt> is declared to have type
 &#8220;reference to T&#8221;, then <tt>E1.E2</tt> is an lvalue; the type of <tt>E1.E2</tt>
@@ -303,7 +303,7 @@ Function overload resolution (13.3) is used [&#8230;]</li></ul>
 </blockquote>
 
 <p>
-5.2.8 [expr.typeid] ¶2:
+5.2.8 [expr.typeid] &para;2:
 </p>
 <blockquote class="std">When <tt>typeid</tt> is applied to a<ins>n
 assigned object</ins> glvalue expression
@@ -323,7 +323,7 @@ the behavior is undefined.</ins> <br>
 
 
 
-<p>5.3.1 [expr.unary.op] ¶1:</p>
+<p>5.3.1 [expr.unary.op] &para;1:</p>
 
 <blockquote class="std"> The unary <tt>*</tt> operator performs
 indirection: the expression to which it is applied shall be a pointer
@@ -347,7 +347,7 @@ type (other than <em>cv</em> <tt>void</tt>)
 can be dereferenced. The lvalue thus obtained can be used in limited
 ways (to initialize a reference, for example); this lvalue must not be
 converted to an rvalue, see 4.1 [conv.lval]. &#8212;<em>end note</em>]</blockquote>
-5.3.1 [expr.unary.op] ¶3:
+5.3.1 [expr.unary.op] &para;3:
 
 <blockquote class="std"> The result of the unary <tt>&amp;</tt>
 operator is a pointer to its operand. The operand shall be an lvalue or
@@ -370,7 +370,7 @@ storage.
 If the lvalue is a null lvalue, the result is the null pointer value.
 If the lvalue is past the end of an object, the result is a pointer
 past the end of that object. Otherwise, the behavior is undefined</ins>.</blockquote>
-<p>5.18 [expr.ass] ¶8:</p>
+<p>5.18 [expr.ass] &para;8:</p>
 <blockquote class="std">The assignment operator (<tt>=</tt>) and the
 compound assignment operators all group right-to-left. All require a
 modifiable lvalue as their left operand and return an lvalue referring
@@ -384,7 +384,7 @@ value computation of the assignment expression.<br></blockquote>
 <p> </p>
 <p>(Drafting note: this refers to P0137's augmentation of [expr.ass].)<br>
 </p>
-<p>8.3.2 [dcl.ref] ¶5: </p>
+<p>8.3.2 [dcl.ref] &para;5: </p>
 
 <blockquote class="std"> [&#8230;] <del>A reference shall be initialized to
 refer to a valid object or function.</del> <ins>A
@@ -420,7 +420,7 @@ behavior. [</ins><em>Example</em>:
   <em>&#8212; end example</em>]</ins>&nbsp; </blockquote>
 
 <ins></ins>
-<p>Create 8.3.2 [dcl.ref] ¶8:<br>
+<p>Create 8.3.2 [dcl.ref] &para;8:<br>
 </p>
 <blockquote class="stdins">Similar to expressions, references have assignment categories (3.10 [basic.lval]) restricted to <em>assigned function</em> reference, <em>assigned object</em> reference, <em>assigned storage</em> reference and <em>invalid reference</em>.
 As described above, if a reference is initialized to be invalid, the
