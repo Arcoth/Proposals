@@ -58,12 +58,12 @@ ul > li:before {
 </head><body>
 <div style="text-align: right; float: right;">
 <p>ISO/IEC JTC1 SC22 WG21, Core Working Group<br>
-PxxxxR0<br>
+DxxxxR0<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
-2016-03-31</p>
+2016-06-02</p>
 </div>
 
-<h2>Fine grained expression classification and reference semantics</h2>
+<h2>Fine grained expression and reference classification</h2>
 
 This paper proposes to introduce the notion of an empty lvalue as
 discussed in core issue 232.<sup><a href="#CWG232">CWG232</a></sup> The
@@ -89,8 +89,7 @@ to objects and merely storage.<br>
 
 <h3>Proposed changes</h3>
 
-We propose four major changes that do not affect the semantics of any
-program:<br>
+We propose four introductions:
 
 <ol>
 <li>A glvalue can be <span style="font-style: italic;">assigned</span>,
@@ -105,16 +104,16 @@ diagnostic required - note that all common implementations already
 diagnose this as a warning. For further discussion on this topic, see
 also SG12's mailing list.<sup><a href="#UB504">UB504</a></sup><br>
   </li><li>References have a subset of glvalues' assignment categories: <span style="font-style: italic;">Assigned object/function/storage reference</span>,
-or <span style="font-style: italic;">invalid reference</span>.</li>
+or <span style="font-style: italic;">invalid reference</span>. </li>
 </ol>
 
-These classifications allow for much more rigorous arguing about
+These classifications allow for more rigorous arguing about
 programs' well-definedness. <br>
 
 
 <h3>Proposed wording</h3>
 
-This wording is relative to N4567 and P0137R0.<sup><a href="#P0137R0">P0137R0</a></sup>
+This wording is relative to N4582 and P0137R0.<sup><a href="#P0137R0">P0137R0</a></sup>
 
 
 <br>
@@ -188,9 +187,9 @@ function returns an (invalid) reference to a local object of automatic
 storage
 duration</ins>. &#8212;<em>end example</em> ]<ins></ins> </li><li>An xvalue (an &#8220;eXpiring&#8221; value) <del>also
 refers to an
-object</del> either refers to an object, usually near the end of its
+object</del> <ins>either refers to an object</ins>, usually near the end of its
 lifetime (so that its resources may
-be moved, for example), or is invalid. Certain kinds of expressions
+be moved, for example)<ins>, or is invalid</ins>. Certain kinds of expressions
 involving rvalue
 references (8.3.2) yield xvalues. [ <em>Example</em>: The result of
 calling a function whose return type is an rvalue reference to an
@@ -437,7 +436,7 @@ storage reference, provided the storage occupied by the original object
 has not
 simultaneously been deallocated. <br></li><li>The reference is an
 assigned object or assigned storage reference, and the storage occupied
-by the object or the designated storage, respectively, are deallocated.
+by the object or the designated storage, respectively, is deallocated.
 The reference becomes an invalid reference.</li><li>The reference is an
 assigned storage reference and a new object of the same cv-unqualified
 type is created in the same storage; under certain circumstances, the
@@ -445,24 +444,7 @@ reference becomes an assigned object reference. [<em>Note</em>: see 3.8 [basic.l
 
 
 An expression whose result is <tt>r</tt>
-is a glvalue of the same assignment category (3.10 [basic.lval]) as <tt>r</tt>'s
-initializer, except that when <tt>r</tt>'s target is constructed,
-destroyed (12.7 [class.cdtor]) or has its storage deallocated (3.8
-[object.life]). When the designated storage or storage occupied by an
-object referred to is deallocated, any expression whose result is that
-reference is an invalid glvalue.
-[<em>Note</em>: this can happen in the following situations:
-  <ul><li>&nbsp;&nbsp;&nbsp;a function call whose result is a reference
-designating a block scope variable with automatic storage duration, or</li><li>&nbsp;&nbsp;&nbsp;a reference is initialized to refer to a
-temporary whose lifetime is not extended.</li></ul>
-
-
-
-
-
-
-
-&#8212; <em>end note</em> ]
+is a glvalue of <tt>r</tt>'s assignment category.
 
 </blockquote>
 <h3>References</h3>
