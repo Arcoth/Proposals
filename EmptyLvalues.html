@@ -81,10 +81,7 @@ null pointers and pointers past the end of an object. <tt>typeid</tt>
 is specified to treat lvalues created by dereferencing a null pointer,
 and the common idiom <tt>&amp;arr[len]</tt> is currently undefined.
 The standard is also unclear about its distinction of lvalues referring
-to objects and merely storage.<br>
-<br>
-
-</p>
+to objects and merely storage. This proposal introduces rigorous classifications of references and expressions and employs them to define these expressions flawlessly. </p>
 
 
 <h3>Proposed changes</h3>
@@ -106,9 +103,6 @@ also SG12's mailing list.<sup><a href="#UB504">UB504</a></sup><br>
   </li><li>References have a subset of glvalues' assignment categories: <span style="font-style: italic;">Assigned object/function/storage reference</span>,
 or <span style="font-style: italic;">invalid reference</span>. </li>
 </ol>
-
-These classifications allow for more rigorous arguing about
-programs' well-definedness. <br>
 
 
 <h3>Proposed wording</h3>
