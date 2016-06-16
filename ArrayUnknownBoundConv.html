@@ -73,7 +73,7 @@ p.grammarrrhs tt { font-style:normal }
 </head><body>
 <div style="text-align: right; float: right;">
 <p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
-DxxxxR0<br>
+P3088R0<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
 <script language="JavaScript">
 <!--
@@ -105,8 +105,8 @@ document.write(year + '-' + zeroPad(month, 2) + '-' + zeroPad(day, 2))
 <pre class="extract"><code>void f(int(&)[]);
 int arr[1];
 
-f(arr);            // Error
-int(&ref)[] = arr; // Error
+f(arr);          // Error
+int(&r)[] = arr; // Error
 </code></pre>
 <p>This restriction is unjustified and should be removed. The practical impact of this extension is deemed insignificant; such parameters were only allowed a while ago
 (with GCC not yet supporting them), and SFINAE-dependent code that is negatively influenced by this change is most certainly not existent.</p>
