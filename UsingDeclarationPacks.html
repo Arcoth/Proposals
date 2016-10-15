@@ -152,7 +152,7 @@ constructor declarations introduced by the <em>using-declaration</em>
 from the nominated base class.
 
 <hr>
-<ins><sup>98) A <em>using-declaration</em> with more than one <em>using-declarator</em>s is equivalent to a corresponding sequence of
+<ins><sup>98) A <em>using-declaration</em> with more than one <em>using-declarator</em> is equivalent to a corresponding sequence of
               <em>using-declaration</em>s with one <em>using-declarator</em>.
 </sup></ins>
 </blockquote>
@@ -160,9 +160,17 @@ from the nominated base class.
 	<p>Modify 7.3.3 [namespace.udecl] &para;3 as indicated:</p>
 	<blockquote class="std">
 		In a <em>using-declaration</em> used as a <em>member-declaration</em>, <del>the</del><ins>each <em>using-declarator</em>&#8217;s</ins> <em>nested-name-specifier</em> shall name a
-		base class of the class being defined. If <del>such a</del><ins>any</ins> <em>using-<del>declaration</del><ins>declarator</ins></em> names a constructor,
-		<ins>all <em>using-declarator</em>s shall name constructors and</ins> </ins> <del>the <em>nested-name-specifier</em></del><ins>their <em>nested-name-specifier</em>s</ins> shall name a
-direct base class of the class being defined.
+		base class of the class being defined. If <del>such</del> a <em>using-<del>declaration</del><ins>declarator</ins></em> names a constructor,
+	    <del>the</del><ins>its</ins> <em>nested-name-specifier</em> shall name a direct base class of the class being defined. <ins>[ <em>Example:</em>
+<pre class="example">
+template &lt;typename... bases>
+struct X : bases... {
+	using bases::g...;
+};
+
+X&lt;B, D> x; // OK: B::g and D::g introduced
+</pre> &mdash; <em>end example</em> ]</ins>
+
 	</blockquote>
 	
 	<p>Modify 7.3.3 [namespace.udecl] &para;10 as indicated:</p>
