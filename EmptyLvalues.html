@@ -107,7 +107,7 @@ or <span style="font-style: italic;">invalid reference</span>. </li>
 
 <h3>Proposed wording</h3>
 
-This wording is relative to N4582 and P0137R0.<sup><a href="#P0137R0">P0137R0</a></sup>
+This wording is relative to the post-N4606 draft (N4606 + <sup><a href="#P0137R1">P0137R1</a></sup>).
 
 
 <br>
@@ -415,14 +415,14 @@ behavior. [</ins><em>Example</em>:
 <ins></ins>
 <p>Create 8.3.2 [dcl.ref] &para;8:<br>
 </p>
-<blockquote class="stdins">Similar to expressions, references have assignment categories (3.10 [basic.lval]) restricted to <em>assigned function</em> reference, <em>assigned object</em> reference, <em>assigned storage</em> reference and <em>invalid reference</em>.
-As described above, if a reference is initialized to be invalid, the
+<blockquote class="stdins">Similar to expressions, references have assignment categories (3.10 [basic.lval]): <em>assigned function</em> reference, <em>assigned object</em> reference, <em>assigned storage</em> reference and <em>invalid reference</em>.
+As described above, if a reference is initialized to be an invalid reference, the
 behavior is undefined.
-After initialization, the reference has the same assignment category as
-the expression it was directly bound to (that is, assigned object
+After initialization, the reference has the same type of assignment category as
+the expression it was directly bound to. That is, assigned object
 expressions correspond to assigned object references, assigned storage
 expressions to assigned storage references, and assigned function
-expressions to assigned function references). Its assignment category
+expressions to assigned function references. A reference's assignment category
 changes in the following situations:
 <ul><li>The reference is an assigned object reference and the
 designated object is destroyed. The reference becomes an assigned
@@ -437,8 +437,17 @@ type is created in the same storage; under certain circumstances, the
 reference becomes an assigned object reference. [<em>Note</em>: see 3.8 [basic.life]. &#8212; <em>end note</em>] <br></li></ul>
 
 
-An expression whose result is <tt>r</tt>
-is a glvalue of <tt>r</tt>'s assignment category.
+An expression whose result is a reference <tt>r</tt> is a glvalue of <tt>r</tt>'s assignment category.
+[ &mdash; <em>Example: </em>
+<pre class="example">
+int const& f() {
+  int const& i = 0; // i is an assigned object reference
+  return i;
+}
+
+auto&& r = f(); // Undefined behavior: the reference can never be used as a non-invalid reference
+</pre>
+&mdash; <em>end example</em>]
 
 </blockquote>
 <h3>References</h3>
@@ -456,8 +465,8 @@ objects&#8220;: <a href="http://wg21.link/cwg453">wg21.link/cwg453</a>
 initializer require a diagnostic?&#8220;:
 <a href="http://wg21.link/cwg504">wg21.link/cwg504</a></p>
 
-<p>[<a id="P0137R0">P0137R0</a>] (Richard Smith) &#8220;Core Issue 1776:
-Replacement of class objects containing reference members&#8220;: <a href="http://wg21.link/P0137R0">wg21.link/P0137R0</a></p>
+<p>[<a id="P0137R0">P0137R1</a>] (Richard Smith) &#8220;Core Issue 1776:
+Replacement of class objects containing reference members&#8220;: <a href="http://wg21.link/P0137R0">wg21.link/P0137R1</a></p>
 
 
 <p>[<a id="UB504">UB504</a>] &#8220;[ub] Proposal: make self-initialized

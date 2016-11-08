@@ -1,0 +1,477 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<style type="text/css">
+	
+
+body { color: #000000; background-color: #FFFFFF; }
+ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
+del, del * { text-decoration:line-through; background-color:#FFA0A0 }
+#hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+
+p, li, blockquote {
+    font-family: "sans", Times, serif;
+    font-size: 11pt
+}
+h1, h2, h3 {font-family: "sans", Times, serif;}
+h4 {font-family: "sans", Times, serif; margin-top:0.25em;}
+
+p.example { margin-left: 2em; }
+pre.example { margin-left: 2em; }
+div.example { margin-left: 2em; }
+
+code.extract { background-color: #F5F6A2; }
+pre.extract { margin-left: 2em; background-color: #FFFFFF;
+  border: 1px solid #E1E28E; font-family: "monospace"; }
+
+p.function { }
+.attribute { margin-left: 2em; }
+.attribute dt { float: left; font-style: italic;
+  padding-right: 1ex; }
+.attribute dd { margin-left: 0em; }
+
+blockquote.std { color: #000000; background-color: #F1F1F1;
+  border: 1px solid #D1D1D1;
+  padding-left: 0.5em; padding-right: 0.5em; padding-bottom: 0.25em }
+blockquote.stddel { text-decoration: line-through;
+  color: #000000; background-color: #FFEBFF;
+  border: 1px solid #ECD7EC;
+  padding-left: 0.5empadding-right: 0.5em; ; }
+
+blockquote.stdins, code.ins { 
+  color: #000000; background-color: #C8FFC8;
+  border: 1px solid #B3EBB3; padding: 0.5em; padding-top:0; }
+
+blockquote pre em { font-family: normal }
+
+table { border: 1px solid black; border-spacing: 0px;
+  margin-left: auto; margin-right: auto; }
+th { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+td { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+  
+
+ul { list-style-type: none; }
+a { text-decoration: none; }
+
+ul > li:before {
+	content: "\2014";
+	position: absolute;
+	margin-left: -1.5em; 
+}
+
+
+p.grammarlhs { font-style:italic; margin-bottom: 0; margin-top: 0em }
+p.grammarrhs { font-style:italic; margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarrrhs { font-style:italic; margin-left:12em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarlhs tt { font-style:normal }
+p.grammarrhs tt { font-style:normal }
+p.grammarrrhs tt { font-style:normal }
+
+  </style>
+  <title>Proposal: free packs</title>
+</head><body>
+<div style="text-align: right; float: right;">
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
+DxxxxR0<br>
+Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
+2016-06-28</p>
+</div>
+
+<h2>Free packs</h2>
+<p>Parameter packs were introduced with C++11 and have proven to be an immensely useful tool, particularly in writing generic libraries.
+However, their introduction is only possible via a (deduced) template parameter, which often makes for tedious circumlocutions. 
+We discuss syntax and design of "free" packs that can be declared and retrieved ad hoc, and provide corresponding wording. 
+
+<br><br>This topic is also discussed in P0341.<sup><a href="#P0341">[P0341]</a></sup>
+Our proposal presents a different approach.
+
+<h3>Motivation</h3>
+
+<p>Consider the following template that transforms a tuple given a functor (skipped perfect forwarding for the sake of simplicity): </p>
+
+<pre class="extract"><code>template &lt;size_t... indices, typename T, typename Func>
+auto transform(T t, Func f, index_sequence&lt;indices...>) {
+    return make_tuple(f(get&lt;indices>(t))...);  
+}
+
+template &lt;typename... T, typename Func>
+auto transform(std::tuple&lt;T...> t, Func f) {
+    return transform(t, f, index_sequence_for&lt;T...>{});
+}</code></pre>
+<p>We introduced a complete second template solely for <tt>indices</tt>, a pack of indices for each of the tuple's elements.
+We need such a pack; but the only practical way it can be obtained is by having it deduced from what <tt>make_index_sequence</tt> gives.</p>
+
+<p>This occurs over and over in code that operates on tuples or packs - if the reader visits an arbitrary Stackoverflow question about variadic templates or tuples,
+she has a good chance of seeing this technique demonstrated.
+<sup><a href="#SO1">[SO1]</a></sup><sup><a href="#SO2">[SO2]</a></sup><sup><a href="#SO3">[SO3]</a></sup><sup><a href="#SO4">[SO4]</a></sup><sup><a href="#SO5">[SO5]</a></sup>
+Introducing free packs would greatly simplify a lot of meta programming code.</p> 
+
+<h3>Design</h3>
+<p>We propose that "free" packs are a new kind of entity that can be defined at block, class and namespace scope:</p>
+<pre class="extract"><code class="c++">// Example definitions:
+typename... t = {int, float, double};
+int... i = {1, 2, 3};
+
+// Pack templates:
+template &lt;size_t n>
+size_t... make_indices = {make_indices&lt;n/2>..., (make_indices&lt;(n+1)/2> + n/2)...};
+template &lt;> size_t... make_indices&lt;1> = {0};
+template &lt;> size_t... make_indices&lt;0> = {};
+
+template &lt;typename... T>
+size_t... indices_for = {make_indices&lt;sizeof...(T)>...};</code></pre>
+                                                    
+<p>Now consider our transform template's new implementation:</p>
+<pre class="extract"><code class="c++">template &lt;typename... T, typename Func>
+auto transform(std::tuple&lt;T...> t, Func f) {
+    return make_tuple(f(get&lt;indices_for&lt;T...>>(t))...);
+}</code></pre>
+
+<p>Or one of P0341's examples:</p>
+<pre class="extract"><code class="c++">template &lt;int> struct accept_all {
+    constexpr accept_all(auto&&);
+};
+	
+template &lt;size_t i, typename U, typename... T> 
+constexpr U&& ith_argument(accept_all&lt;get_indices&lt;i>>..., U&& u, T&&...) {
+    return std::forward&lt;U>(u);}</code></pre>
+    
+<h4>Pack templates</h4>
+<p>Demonstrated above are pack templates, the semantics of which are defined to be very similar to alias templates: They don't introduce a <em>template-id</em> (and thus cannot be
+specialized), and they allow for the usual deduction for function templates: 
+<pre class="extract"><code>template &lt;typename T>
+typename... forwarding_ref = {T&&, T&};
+	
+template &lt;typename T>
+void f(forwarding_ref&lt;T>...);
+
+int i;
+f(0, i); // Ok: T = int</code></pre>
+</p>
+   
+<h4>Template packs?</h4>
+<p>There has been far less clamor for template packs than both type and value packs, which by contrast have definite applications (some of which are outlined in this proposal).
+They do not go well with pack templates; partly because they create the notion of a &ldquo;template template&rdquo;,leading to abhorrent invocation syntax
+in dependent contexts:  </p>
+<pre class="extract"><code>template &lt;int> struct A {};
+
+struct X {
+  template &lt;typename>
+  template &lt;int> struct pack = {A, A, A};
+};
+
+template &lt;typename T>
+struct Y {
+  typename... t = {typename T::template ... template pack&lt;int>&lt;0>...};
+};
+</code></pre> 
+<p>To avoid such monstrosities, template packs must be restricted to an extent that would make the design appear inconsistent. We therefore do not propose template packs. </p>
+
+<h4>Non-static data packs?</h4>
+<p>One of the core ideas of P0341 were non-static data member packs, as in this simple implementation of a tuple:</p>
+<pre class="extract"><code>template &lt;typename... T> struct tuple {
+    T... values;
+};</code></pre>
+<p>Note that this implementation does not allow for EBO to be exploited, a commonly relied on feature of <tt>tuple</tt>. <br>Tuple expansion is named as an example were such packs would prove useful:</p>
+<pre class="extract"><code class="c++">void f(int, double, long);
+tuple&lt;double, long> tdl(3.4, 5L);
+f(2, tdl.value...); // #1</code></pre>
+<p>We can achieve a similarly terse notation using this proposal's free packs and <tt>std::get</tt>:</p>
+<pre class="extract"><code class="c++">void f(int, double, long);
+tuple&lt;double, long> tdl(3.4, 5L);
+f(2, get&lt;tdl.indices>(tdl)...); // #2  (Assuming tuple provides a corresponding member pack)
+</code></pre>
+<p>Every single application of non-static data member packs can 
+be reduced to index packs and library solutions (aka <tt>tuple</tt>). That is, the only code that vendors need to optimize for #2 to be as
+efficient as #1 is <tt>tuple</tt>'s <tt>get</tt> function. Non-static data member packs are a suggestive feature but not integral to free packs;
+we feel that this is best addressed by a follow-up paper. </p>
+
+<h4>A syntactical disambiguator in dependent contexts analogous to <tt>:: template</tt></h4>
+<p>As pointed out by Douglas Gregor back when this feature was first proposed in similar form,<sup><a href="#COMP1">[COMP1]</a></sup>
+allowing member packs - as this proposal does - implies that we cannot per se know whether a dependent
+<em>qualified-id</em> names e.g. a value or a pack of values. Consider </p>
+<pre class="extract"><code>template &lt;typename T1, typename T2> void g2() {
+    f(T1::members + T2::members...);
+}</code></pre>
+<p>Both <tt>T1::members</tt> and <tt>T2::members</tt> could be packs, simultaneously or only one at a time.
+Although such pack expansions would not be technically problematic, they are ; the three aforementioned possibilities
+will all produce a well-formed instantiated function. It also makes code harder to comprehend</p>
+
+<p>The next example demonstrates the only context in the language in which there is an ambiguity between a pack expansion and another construct (an ellipsis indicating that the
+ function is variadic):</p>
+<pre class="extract"><code class="c++">template &lt;typename T> struct ParamPackOrEllipsis {
+    void h(typename T::members...); // variadic function or pack expansion?
+};</code></pre>
+<p>In order to avoid this, we need to mark the dependent names intended for packs separately. The syntax we propose is the following:</p>
+<ol><li><p>&ldquo;<tt>T::... x</tt>&rdquo; for a value pack,</p></li>
+<li><p>&ldquo;<tt>typename T::... x</tt>&rdquo; for a type pack, and</p></li>
+<li><p>&ldquo;<tt>T::... template x</tt>&rdquo; for a template pack.</p></li></ol>
+<p>Note how employing the ellipsis does not produce ugly results as in &ldquo;<tt>t....x</tt>&rdquo;, since <tt>::</tt> is 
+used instead of <tt>.</tt>. When we refer to a pack template, the <tt>template</tt> keyword is prepended to the ellipsis, i.e. &ldquo;<tt>T::template... x</tt>&rdquo; and 
+&ldquo;<tt>typename T::template... x</tt>&rdquo; are names for corresponding pack templates. Note that <b>there are no pack templates of templates</b>, because the syntax of their 
+invocation is extremely peculiar (<tt>T::template... template x&lt;arg1>&lt;arg2>...</tt>).<br>
+The rule of thumb to teach is that the construct immediately following <tt>::</tt> gives the kind of the entity so named: <tt>template</tt> indicates a template,
+<tt>...</tt> indicates a pack. &ldquo;<tt>template...</tt>&rdquo; is a template of <tt>...</tt> (packs), &ldquo;<tt>... template</tt>&rdquo; is a <tt>...</tt> of templates (a template pack).
+</p>
+<pre class="extract"><code></code></pre>
+
+<h3>Wording</h3>
+
+<p>3 [basic] &para;3:</p>
+<blockquote class="std">An entity is a value, object, reference, function, enumerator, type, class member,
+bit-field, template, template specialization, namespace, or <del>parameter</del> pack.</blockquote>
+
+<p>3.2 [basic.def.odr] &para;2:</p>
+<blockquote class="std">A <em>declaration</em> is a definition unless it declares [&hellip;], an explicit instantiation
+declaration (14.7.2), <del>or</del> an explicit specialization (14.7.3) whose <em>declaration</em> is not a definition<ins>, or a free pack (7.1.7)</ins>.</blockquote>
+
+<p>5.1.1 [expr.prim.general] &para;8:</p>
+<blockquote class="std">
+<p class="grammarlhs">qualified-id:</p>
+<p class="grammarrhs">nested-name-specifier &nbsp; <ins><tt>...</tt><sub>opt</sub></ins> &nbsp;<tt>template</tt><sub>opt</sub> &nbsp; unqualified-id</p>
+<p class="grammarlhs">nested-name-specifier:</p>
+<p class="grammarrhs">&hellip;</p>
+<p class="grammarrhs">nested-name-specifier &nbsp; <ins><tt>...</tt><sub>opt</sub></ins> &nbsp;<tt>template</tt><sub>opt</sub> &nbsp; simple-template-id &nbsp; <tt>::</tt></p>
+</blockquote>
+
+<p>5.1.1 [expr.prim.general] &para;9:</p>
+<blockquote class="std"><del>A</del> <ins>The result of a <em>qualified-id</em> whose</ins> <em>nested-name-specifier</em> <del>that</del> denotes a class,
+<del>optionally followed by the keyword <tt>template</tt> (14.2), and then
+followed by the</del> <ins>and whose <em>unqualified-id</em> is the</ins> name of a member of either that class (9.2) or one of its base classes (Clause 10), is <del>a
+<em>qualified-id</em></del> <ins>that member</ins>; 3.4.3.1 describes name lookup for class members that appear in <em>qualified-id</em>s. <del>The result is the
+member.</del></blockquote>
+
+<p>5.1.2 [expr.prim.lambda] &para;3:</p>
+<blockquote class="std">A <em>lambda-expression</em> shall not appear in an unevaluated operand (Clause 5), in a <em>template-argument</em>,
+in an <em>alias-declaration</em>, in a <tt>typedef</tt> declaration, <del>or</del> in the declaration of a function or function
+template outside its function body and default arguments<ins>, or in a <em>pack-declaration</em> (7.1.7)</ins>.</blockquote>
+
+<p>5.2 [expr.post] &para;1:</p>
+<blockquote class="std"><p class="grammarlhs">pseudo-destructor-name:</p>
+<p class="grammarrhs">nested-name-specifier<sub>opt</sub> &nbsp; type-name &nbsp;<tt>:: ~</tt> &nbsp;type-name</p>
+<p class="grammarrhs">nested-name-specifier&nbsp; <ins><tt>...</tt><sub>opt</sub></ins> &nbsp;  <tt>template</tt> &nbsp; simple-template-id &nbsp;<tt>:: ~</tt> &nbsp; type-name</p>
+<p class="grammarrhs">&hellip;</p></blockquote>
+
+<p>5.2.5 [expr.ref] &para;4	:</p>
+<blockquote class="std">(4.5) &nbsp; &mdash;&ensp; If <tt>E2</tt> is a member enumerator and the type of <tt>E2</tt> is <tt>T</tt>,<ins> or <tt>E2</tt> is a free value pack with element type <tt>T</tt>,</ins> the expression <tt>E1.E2</tt> is a prvalue. The type of
+<tt>E1.E2</tt> is <tt>T</tt>.</blockquote>
+
+<p>7 [dcl.dcl] &para;1:</p>
+<blockquote class="std">
+<p class="grammarlhs">block-declaration:</p>
+<p class="grammarrhs">&hellip;</p>
+<p class="grammarrhs">opaque-enum-declaration</p>
+<p class="grammarrhs"><ins>pack-declaration</ins></p>
+</blockquote>
+
+<p>7.1.6.2 [dcl.type.simple] &para;1:</p>
+<blockquote class="std">
+<p class="grammarlhs">simple-type-specifier:</p>
+<p class="grammarrhs">nested-name-specifier<sub>opt</sub> &nbsp; type-name</p>
+<p class="grammarrhs">nested-name-specifier &nbsp; <ins><tt>...</tt><sub>opt</sub></ins>  &nbsp; <tt>template</tt>&nbsp;simple-template-id</p>
+</blockquote>
+
+<p>7.1.6.3 [dcl.type.elab] &para;1:</p>
+<blockquote class="std">
+<p class="grammarlhs">elaborated-type-specifier:</p>
+<p class="grammarrhs">class-key &nbsp; attribute-specifier-seq<sub>opt</sub> &nbsp; nested-name-specifier<sub>opt</sub> &nbsp; identifier</p>
+<p class="grammarrhs">class-key &nbsp; simple-template-id</p>
+<p class="grammarrhs">class-key &nbsp; nested-name-specifier &nbsp; <ins><tt>...</tt><sub>opt</sub></ins> &nbsp; <tt>template</tt><sub>opt</sub> &nbsp;  simple-template-id</p>
+<p class="grammarrhs"><tt>enum</tt> &nbsp; nested-name-specifier<sub>opt</sub> &nbsp; identifier</p></blockquote>
+
+<p>Introduce the section 7.1.7 [dcl.pack] "Pack specifiers":</p>
+<blockquote class="stdins"><h4>7.1.7 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pack specifiers 
+<div style="text-align: right; float: right;">[dcl.pack]</div></h4>
+<ol>
+<li><p>A <em>pack-specifier</em> introduces a <em>pack-declaration</em>, which declares a <em>free pack</em>. 
+A <em>pack</em> is a free pack or a parameter pack. [<i>Note</i>: 14.5.3 handles parameter packs. Declarations of parameter packs are not <em>pack-declaration</em>s.
+<i>&mdash; end note</i>]</p> 
+
+<p class="grammarrhs">pack-specifier:</p>
+<p class="grammarrrhs">type-parameter-key</p>
+<p class="grammarrrhs">type-id</p>
+<p class="grammarrrhs"><tt>template &lt; </tt>template-parameter-list<tt> > </tt>type-parameter-key</p><br>
+
+<p class="grammarrhs">pack-declaration:</p>
+<p class="grammarrrhs">pack-specifier <tt>...</tt> &nbsp; identifier &nbsp; attribute-specifier-seq<sub>opt</sub> &nbsp; <tt>=</tt><sub>opt</sub> &nbsp; 
+<tt>{</tt> template-argument-list <tt>} ;</tt></p>
+
+<li><p>The <em>template-argument-list</em> has to satisfy the rules specified in 14.3 [temp.arg], where &ldquo;<em>pack-specifier</em> <tt>...</tt>&rdquo;
+is a hypothetical template parameter pack and the elements of the <em>template-argument-list</em> the corresponding <em>template-argument</em>s.
+If the <em>pack-specifier</em> is a type, any top-level <em>cv-qualifier</em>s are ignored.</p></li>
+
+<li><p>A <em>pack-declaration</em> can be the <em>declaration</em> of a <em>template-declaration</em>. Such a template is called a pack template (see 14.5.8).</p></li>
+
+<li><p>A <em>pack-declaration</em> can occur at block scope, at namespace scope, and at class scope.</p></li>
+
+<li value="11"><p>If a pack expansion's pattern contains a <em>template-id</em> that names a specialization of a pack template,
+its template arguments shall not be unexpanded packs. [ <em>Example:</em> </p>
+
+<pre class="example"><code class="ins">typename... foo = {int, char, double}; 
+template &lt;typename T> 
+typename... baz = {T, T}; 
+
+typename... x = {baz&lt;foo>...}; // Error: Pattern contains baz&lt;foo>, a pack template with a pack argument </code></pre>
+
+</li>
+</ol></blockquote>
+<p>Drafting note: The intermediate paragraphs are to be filled with what is moved from 14.5.3 (see below).</p>
+
+<p>14 [temp] &para;1:</p>
+<blockquote class="std"><p>A template defines a family of classes or functions or an alias for a family of types<ins> or packs</ins>.</p>
+
+<p class="grammarrhs">template-declaration:</p>
+<p class="grammarrrhs"><tt>template &lt; </tt> template-parameter-list <tt>></tt> declaration </p><br>
+
+<p class="grammarrhs">template-parameter-list:</p>
+<p class="grammarrrhs">template-parameter</p>
+<p class="grammarrrhs">template-parameter-list <tt>,</tt> template-parameter</p>
+
+<p>The <em>declaration</em> in a <em>template-declaration</em> shall</p>
+<ul><li><p>&hellip;</p></li>
+<li><p>be an <em>alias-declaration</em><del>.</del><ins>, or</ins></p></li>
+<li><p><ins>be a <em>pack-declaration</em>.</ins></p></li></ul>
+
+</blockquote>
+
+<p>14.1 [temp.param] &para;15:</p>
+<blockquote class="std">A template parameter pack that is a <em>parameter-declaration</em> whose type contains one or
+more unexpanded <del>parameter</del> packs is a pack expansion. Similarly, a template parameter pack that is a
+<em>type-parameter</em> with a <em>template-parameter-list</em> containing one or more unexpanded <del>parameter</del> packs is a pack
+expansion. A template parameter pack that is a pack expansion shall not expand a parameter pack declared
+in the same <em>template-parameter-list</em><ins>, and shall expand at least one free pack or parameter pack of an enclosing template.</ins>.
+[ <em>Example:</em> <pre class="example"><code>[&hellip;]
+
+<ins>typename... Ts {int, long};
+
+template &lt;typename T, typename T::... pack...> class A {}; // Error: Can only expand T::pack, which is dependent
+template &lt;typename T, typename T::... template templs&lt;Ts>...> class A {}; // Ok: Expands fixed sized &ldquo;Ts&rdquo; </ins></code></pre> <em>&mdash; end example</em> ]
+</blockquote>
+
+<p>14.2 [temp.names] &para;4:</p>
+<blockquote class="std">When the name of a member template specialization appears after <tt>.</tt> or <tt>-></tt> in a <em>postfix-expression</em> or after a
+<em>nested-name-specifier</em> in a <em>qualified-id</em>, and the object expression of the <em>postfix-expression</em> is type-dependent
+or the <em>nested-name-specifier</em> in the <em>qualified-id</em> refers to a dependent type, but the name is not a member of
+the current instantiation (14.6.2.1), the member template name must be prefixed by the keyword <tt>template</tt>. Otherwise the name is assumed to name a non-template.</blockquote>
+
+<p><b>Move 14.5.3 [temp.variadic] &para;4,5,6,7,8,9 to section 7.1.7 [dcl.pack] (starting at &para;5), making the following changes:</b></p> 
+
+<p>7.1.7 [dcl.pack] &para;6:</p>
+<blockquote class="std">For the purpose of determining whether a <del>parameter</del> pack satisfies a rule regarding entities other than
+<del>parameter</del> packs, the <del>parameter</del> pack is considered to be the entity that would result from an instantiation of
+the pattern in which it appears.</blockquote>
+
+<p>7.1.7 [dcl.pack] &para;7:</p>
+<blockquote class="std">A <del>parameter</del> pack whose name appears within the pattern of a pack expansion is expanded by that pack
+expansion. An appearance of the name of a <del>parameter</del> pack is only expanded by the innermost enclosing pack
+expansion. The pattern of a pack expansion shall name one or more <del>parameter</del> packs that are not expanded
+by a nested pack expansion; such <del>parameter</del> packs are called <em>unexpanded</em> <del>parameter</del> packs in the pattern. All
+of the <del>parameter</del> packs expanded by a pack expansion shall have the same number of arguments specified.
+An appearance of a name of a <del>parameter</del> pack that is not expanded is ill-formed.</blockquote>
+
+<p>Introduce 7.1.7 [dcl.pack] &para;8 (8.3):</p>
+<blockquote class="stdins"><p>(8.3) &nbsp;&mdash; &ensp; if the pack is a free pack,</p> 
+<div style="margin-left: 3.5em;"><ul>
+<li>if the pack is of types, each element is a <em>type-id</em> representing the type designated by the corresponding <em>template-argument</em>, or</li>
+<li>if the pack is of templates, each element is a <em>template-name</em> naming the template designated by the corresponding <em>template-argument</em>, or</li>
+<li>if the pack is of values, each element is an <em>expression</em> whose type and value matches the <em>template-argument</em></li></ul></div></blockquote>
+
+<p>7.1.7 [dcl.pack] &para;9:</p>
+<blockquote class="std">The instantiation of a <tt>sizeof...</tt> expression (5.3.3) produces an integral constant containing the number of
+elements in the <del>parameter</del> pack it expands.</blockquote>
+
+<p>7.1.7 [dcl.pack] &para;10:</p>
+<blockquote class="std">For a binary fold-expression, <tt>E</tt> is generated by instantiating the <em>cast-expression</em> that did not contain
+an unexpanded <del>parameter</del> pack.</blockquote>
+
+<p>Introduce the section 14.5.8 [temp.pack] "Pack templates" (essentially adapting 14.5.7 [temp.alias]):</p>
+<blockquote class="stdins"><h4>14.5.8 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pack templates 
+<div style="text-align: right; float: right;">[temp.pack]</div></h4>
+<ol>
+<li><p>A <em>template-declaration</em> in which the <em>declaration</em> is an <em>pack-declaration</em> (7.1.7) declares the <em>identifier</em> to
+be a <em>pack template</em>. A pack template is a name for a family of packs. The name of the pack template is a <em>template-name</em>.</p></li>
+<li><p>When a <em>template-id</em> refers to the specialization of an pack template, is equivalent to the associated pack
+obtained by substitution of its <em>template-argument</em>s for the <em>template-parameter</em>s in the <em>braced-init-list</em> of the pack
+template. [ <em>Note</em>: An pack template name is never deduced. &mdash; <em>end note</em> ]</p></li>
+<li><p>However, if the <em>template-id</em> is dependent, subsequent template argument substitution still applies to the <em>template-id</em>. 
+[<em>Example:</em></p> <pre class="example"><code class="ins">template &lt;typename T> typename... pack = {};
+template &lt;typename T> void f(pack&lt;typename T::foo>...);
+f&lt;int>(); // Error: int is not a class type</code></pre> <p><em>&mdash; end example</em>]</p></li>
+<li><p>The <em>braced-init-list</em> in a pack template declaration shall not refer to the pack template being declared. The pack
+produced by a pack template specialization shall not directly or indirectly make use of that specialization.</p></li>
+</ol></blockquote>
+
+<p>14.5 [temp.decls] &para;3:</p>
+<blockquote class="std">Because <del>an</del> <em>alias-declaration</em><ins>s and <em>pack-declaration</em>s</ins> cannot declare a <em>template-id</em>,
+it is not possible to partially or explicitly specialize an alias <ins>or pack</ins> template.</blockquote>
+
+<p>14.6 [temp.res]:</p>
+<blockquote class="std">
+<ol><li value="2">A name used in a template declaration or definition and that is dependent on a <em>template-parameter</em> is assumed
+not to name a type unless the applicable name lookup finds a type name or the name is qualified by the keyword <tt>typename</tt>. <ins>Such a name that denotes a pack 
+is not assumed to name a type pack unless the applicable name lookup finds the declaration of a type pack or the <em>unqualified-id</em> in the name is 
+qualified by an ellipsis.</ins>
+</li>
+	<li value="3"><p>When a <em>qualified-id</em> is intended to refer to a type <ins>or free type pack</ins> that is not a member of the current instantiation (14.6.2.1)
+and its <em>nested-name-specifier</em> refers to a dependent type, it shall be prefixed by the keyword <tt>typename</tt>, forming a <em>typename-specifier</em>.
+If the <em>qualified-id</em> in a <em>typename-specifier</em> does not denote a type <ins>or free type pack</ins>, the program is ill-formed. [&hellip;]</p></li>
+	<li value"4"><p>If a specialization of a template is instantiated for a set of <em>template-argument</em>s such that the <em>qualified-id</em>
+prefixed by <tt>typename</tt> does not denote a type <ins>or free type pack</ins>, the specialization is ill-formed.</p></li>
+<li value="6"><p>If, for a given set of template arguments, a specialization of a template is instantiated that refers to a
+<em>qualified-id</em> that denotes a type<ins> or type pack</ins>, and the <em>qualified-id</em> refers to a member of an unknown specialization, the
+<em>qualified-id</em> shall either be prefixed by <tt>typename</tt> or shall be used in a context in which it implicitly names a
+type as described above. [<em>Example:</em> &hellip; <em>&mdash; end example</em>]<ins> [<em>Example:</em></ins> 
+<pre class="example"><code class="ins">template &lt;class T> void f(int i) {
+    cout &lt;&lt; ... &lt;&lt; (i * T::x); // x shall not be a type
+}
+
+struct A {static int const x = 0;};
+struct B {typename... x = {int};};
+struct C {int... x = {1, 2, 3};};
+
+f&lt;A>(1); // Error: No unexpanded pack in &ldquo;cout&rdquo; and &ldquo;(i * T::x)&rdquo;
+f&lt;B>(1); // Error: x is a type pack
+f&lt;C>(1); // Ok: C::x is expanded</code></pre>
+
+ <ins><em>&mdash; end example</em>]</ins></p></li>
+ 
+ <li><p>Within the definition of a class template or within the definition of a member of a class template following
+the <em>declarator-id</em>, the keyword <tt>typename</tt> is not required when referring to the name of a previously declared
+member of the class template that declares a type<ins> or type pack</ins>.</p></li>
+ 
+ <li value="8"><p>&ensp;(8.2) &mdash; &ensp; every valid specialization of <del>a variadic</del> template requires an empty template parameter pack<ins> or empty free pack</ins>,
+ or</p></li>
+ 
+ </ol>
+	 </blockquote>
+
+<h3>References</h3>
+
+<p>[<a id="P0341">P0341</a>] &#8220;Packaging Parameter Packs (Rev. 2)&#8220;: <a href="http://wg21.link/p0341r0">wg21.link/p0341r0</a></p>
+<p>[<a id="SO1">SO1</a>] &#8220;Can tuple variadic template recursion be improved with C++14 index sequences?&#8220;: <a href="http://stackoverflow.com/q/26365549/3647361">
+stackoverflow.com/q/26365549/3647361</a><br>
+[<a id="SO2">SO2</a>] &#8220;Compact and Simple std::tuple inversion&#8220;: <a href="http://stackoverflow.com/a/28240811/3647361">
+stackoverflow.com/a/28240811/3647361</a><br>
+[<a id="SO3">SO3</a>] &#8220;Check traits for all variadic template arguments&#8220;: <a href="
+http://stackoverflow.com/a/28253503/3647361">
+stackoverflow.com/a/28253503/3647361</a><br>
+[<a id="SO4">SO4</a>] &#8220;How to implement a variadic tuple_map operation?&#8220;: <a href="
+http://stackoverflow.com/a/26246990/3647361">
+stackoverflow.com/a/26246990/3647361</a><br>
+[<a id="SO4">SO5</a>] &#8220;Parameter pack, capture clause and initializers&#8220;: <a href="
+http://stackoverflow.com/a/36939483/3647361">
+stackoverflow.com/a/36939483/3647361</a></p>
+
+
+<p>[<a id="COMP1">COMP1</a>] &#8220;Variadic Templates in C++0x need some additional features [&hellip;]&#8220;:
+<a href="https://groups.google.com/d/msg/comp.std.c++/_-6X_xZlKlA/-HhvKh5ccEAJ">
+groups.google.com/d/msg/comp.std.c++/_-6X_xZlKlA/-HhvKh5ccEAJ</a></p>
+
+
+<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/styles/idea.min.css">
+<script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/highlight.min.js"></script>
+<script>hljs.initHighlighting();</script>
+
+</body>
+</html>
