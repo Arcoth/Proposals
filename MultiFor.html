@@ -1,0 +1,249 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  
+  <style type="text/css">
+<style type="text/css">
+body { color: #000000; background-color: #FFFFFF; }
+ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
+del, del * { text-decoration:line-through; background-color:#FFA0A0 }
+#hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+
+p, li, blockquote {
+    font-family: "sans", Times, serif;
+    font-size: 11pt
+}
+h1, h2, h3 {font-family: "sans", Times, serif;}
+h4 {font-family: "sans", Times, serif; margin-top:0.25em;}
+
+p.example { margin-left: 2em; }
+pre.example { margin-left: 2em; }
+div.example { margin-left: 2em; }
+
+code.extract { background-color: #F5F6A2; }
+pre.extract { margin-left: 2em; background-color: #FFFFFF;
+  border: 1px solid #E1E28E; font-family: "monospace"; }
+
+p.function { }
+.attribute { margin-left: 2em; }
+.attribute dt { float: left; font-style: italic;
+  padding-right: 1ex; }
+.attribute dd { margin-left: 0em; }
+
+blockquote.std { color: #000000; background-color: #F1F1F1;
+  border: 1px solid #D1D1D1;
+  padding-left: 0.5em; padding-right: 0.5em; }
+blockquote.stddel { text-decoration: line-through;
+  color: #000000; background-color: #FFEBFF;
+  border: 1px solid #ECD7EC;
+  padding-left: 0.5empadding-right: 0.5em; ; }
+
+blockquote.stdins { 
+  color: #000000; background-color: #C8FFC8;
+  border: 1px solid #B3EBB3; padding: 0.5em; padding-top:0; }
+
+blockquote pre em { font-family: normal }
+
+table { border: 1px solid black; border-spacing: 0px;
+  margin-left: auto; margin-right: auto; }
+th { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+td { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+  
+
+ul { list-style-type: none; }
+a { text-decoration: none; }
+
+ul > li:before {
+	content: "\2014";
+	position: absolute;
+	margin-left: -1.5em; 
+}
+
+
+p.grammarlhs { font-style:italic; margin-bottom: 0; margin-top: 0em }
+p.grammarrhs { font-style:italic; margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarrrhs { font-style:italic; margin-left:12em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarlhs tt { font-style:normal }
+p.grammarrhs tt { font-style:normal }
+p.grammarrrhs tt { font-style:normal }
+  </style>
+</head><body>
+	
+<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/styles/idea.min.css">
+<script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+<div style="text-align: right; float: right;">
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
+DxxxxR0<br>
+Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
+2016-11-13</p>
+</div>
+
+<h2>Range-based for with multiple ranges</h2>
+<p>Range-based for loops can be extended to deal with multiple ranges simultaneously.
+This paper presents a simple generalization of the wording to allow this. Analogous to evolution issue 43.<sup><a href="#EWG43">EWG43</a></sup>
+</p>
+
+<h3>Motivation</h3>
+<p>Many (even basic) algorithms operate on multiple ranges simultaneously, which is affirmed by various STL templates like <tt>inner_product</tt> or <tt>transform</tt>. 
+We would therefore like to have range-based for applicable in the same manner:</p>
+<pre class="extract">
+<code>transform(begin(S), end(S), begin(R), [] (auto x) {return abs(x);});
+
+// vs
+
+for (auto& i : R; auto j : S)
+	i = abs(j);
+</code></pre>
+
+<h3>Design decisions</h3>
+
+<h4>Syntax</h4><p>Separation of the individual ranges and variables is done as proposed in issue 43, using a semicolon. Alternatively a comma could be used,
+but this clashes too strongly with the syntax of declarations with multiple declarators. Yet again, one can use <tt>|</tt> to underline the 
+simultaneity of the iterations, but we feel that the latter is too much of a good thing and would cause confusion.</p>
+
+<h4>Semantics</h4><p>The evaluation of all operations is carried out in order.</p>
+<p>Furthermore the loop runs as long as each range is not exhausted. That is, in the above example, the <tt>transform</tt>-equivalent is actually</p>
+<pre class="extract">
+<code>transform(begin(S), end(S), begin(R), end(R), [] (auto x) {return abs(x);});
+</code></pre>
+
+<h3>Library alternative</h3>
+Given decomposition declarations, we can write
+<pre class="extract">
+<code>for (auto [a, b, c] : compose(X, Y, Z))
+     // ...
+</code></pre>
+
+A sample implementation:
+of <tt>compose</tt>:
+<pre class="extract">
+<code>template &lt;typename...&gt;
+struct ComposedIterator;
+
+// Not an InputIterator, merely auxiliary
+template &lt;typename... Iter, std::size_t... indices&gt;
+struct ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Iter...&gt; : std::tuple&lt;Iter...&gt; {
+	using std::tuple&lt;Iter...&gt;::tuple;
+	constexpr auto&amp; operator++() {
+		(void)std::initializer_list&lt;int&gt; { (++std::get&lt;indices&gt;(*this), 0)... };
+		return *this;
+	}
+	template &lt;typename... Sentinels&gt;
+	constexpr bool operator==(ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Sentinels...&gt; const&amp; other) const {
+		return ((std::get&lt;indices&gt;(*this) == std::get&lt;indices&gt;(other)) || ...); }
+	template &lt;typename... Sentinels&gt;
+	constexpr bool operator!=(ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Sentinels...&gt; const&amp; other) const {
+		return !(*this == other); }
+	constexpr auto operator*() {
+		return std::forward_as_tuple(*std::get&lt;indices&gt;(*this)...);
+	}
+};
+
+template &lt;typename Iterator, typename Sentinel&gt;
+struct IteratorPair {
+	Iterator first;
+	Sentinel last;
+	constexpr auto begin() const {return first;}
+	constexpr auto end() const {return last;}
+};
+
+template &lt;typename... R&gt;
+constexpr auto compose(R&amp;... r) {
+	using std::begin;
+	using std::end;
+	return IteratorPair&lt;ComposedIterator&lt;std::make_index_sequence&lt;sizeof...(R)&gt;, decltype(begin(r))...&gt;,
+	                    ComposedIterator&lt;std::make_index_sequence&lt;sizeof...(R)&gt;, decltype(end(r))...&gt;&gt;{{{begin(r)...}}, {{end(r)...}}};
+}
+</code></pre>
+This already works under Clang. <sup><a href="#DEMO1">DEMO1</a></sup> However, this approach is slightly less powerful in that it allows the variables to take arbitrary types, and isn't as
+syntactically concise as the proposed form. It is even counterintuitive in that it provides references to the range's elements although no <em>ref-qualifier</em> is present in the decomposition declaration.
+(We could introduce <tt>compose_ref</tt> and <tt>compose_value</tt>, but that would not change the fact that <tt>compose_ref</tt> requires no <em>ref-qualifier</em>.)
+
+
+<h3>Proposed wording</h3>
+
+6.5 [stmt.iter]&para;1:
+<blockquote class="std">
+<p><em>...</em></p>
+<p class="grammarlhs"><tt>for (</tt> <del>for-range-declaration <tt>:</tt> for-range-initializer</del> <ins>for-range-extractor-seq</ins> <tt>)</tt> statement</p>
+<p class="grammarlhs"><ins>for-range-extractor-seq:</ins></p>
+<p class="grammarrhs"><ins>for-range-extractor <tt>;</tt> for-range-extractor-seq</ins></p>
+<p class="grammarrhs"><ins>for-range-extractor</ins></p>
+<p class="grammarlhs"><ins>for-range-extractor:</ins></p>
+<p class="grammarrhs"><ins>for-range-declaration <tt>:</tt> for-range-initializer</ins></p>
+</blockquote>
+
+6.5.4 [stmt.ranged]&para;1:
+
+<blockquote class="std">The range-based for statement<br><br>
+
+<p class="grammarrhs"><tt>for (</tt> <del>for-range-declaration <tt>:</tt> for-range-initializer</del> <ins>for-range-extractor-seq</ins> <tt>)</tt> statement</p>
+
+<br>is equivalent to
+
+<pre class="example">{
+      auto &&__range<sub><ins><em>1</em></ins></sub> = <em>for-range-initializer<sub><ins><em>1</em></ins></sub></em> ;
+<ins>      <em>&middot;&middot;&middot;</em>
+      auto &&__range<sub><em>n</em></sub> = <em>for-range-initializer<sub>n</sub></em> ;</ins>
+      auto __begin<ins><sub><em>1</em></sub></ins> = <em>begin-expr<sub><ins>1</ins></sub></em> ;
+      auto __end<ins><sub><em>1</em></sub></ins> = <em>end-expr<sub><ins>1</ins></sub></em> ;
+<ins>      <em>&middot;&middot;&middot;</em>
+      auto __begin<sub><em>n</em></sub> = <em>begin-expr<sub>n</sub></em> ;
+      auto __end<sub><em>n</em></sub> = <em>end-expr<sub>n</sub></em> ;</ins>
+      for ( ; __begin<ins><sub><em>1</em></sub></ins> != __end<ins><sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && __begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub></ins> ; ++__begin<sub><ins><em>n</em></ins></sub><ins>, <em>&middot;&middot;&middot;</em>, ++__begin<sub><em>n</em></sub></ins> )</ins> {
+            <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub>;
+<ins>            <em>&middot;&middot;&middot;</em>
+            <em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub>;</ins>
+            <em>statement</em>
+      }
+}
+</pre>
+
+where
+
+<ul>
+<li value="&mdash;"><ins><em>for-range-extractor-seq</em> is a sequence of <em>&nbsp;n &nbsp;for-range-extractor</em>s (with <em>n</em> greater or equal to 1), separated by semicolons, whose respective nonterminal components
+are addressed using an index, i.e. <em>for-range-declaration<sub>i</sub></em> and <em>for-range-initializer<sub>i</sub></em>; </ins></li>
+
+<li value="&mdash;"><ins>there are <em>n</em> definitions of <tt>__range</tt><sub><em>i</em></sub>, <tt>__begin</tt><sub><em>i</em></sub>, <tt>__end</tt><sub><em>i</em></sub>
+and <em>for-range-declaration<sub>i</sub></em> initialized with 
+<em>for-range-initializer<sub>i</sub></em>, <em>begin-expr<sub>i</sub></em>, <em>end-expr<sub>i</sub></em> and <tt>*__begin</tt><sub><em>i</em></sub>, respectively, all in order of increasing <em>i</em>; </ins></li>
+
+<li value="&mdash;"><ins>the <em>condition</em> of the <tt>for</tt> loop is the logic conjunction of <tt>__begin<sub><em>i</em></sub> != __end<sub><em>i</em></sub></tt> for <em>i</em> 
+in [1, <em>n</em>] in order of increasing <em>i</em>, and the <tt>for</tt> loop's <em>expression</em> increments all <tt>__begin</tt><sub><em>i</em></sub> in order of increasing <em>i</em>;</ins></li>
+
+<li value="&mdash;">if <del>the</del> <em>for-range-initializer<ins><sub>i</sub></ins></em> is an <em>expression</em>, it is regarded as if it were surrounded by parentheses (so
+that a comma operator cannot be reinterpreted as delimiting two init-declarators);</li>
+
+<li value="&mdash;"><tt>__range<ins><sub><em>i</em></sub></ins></tt>, <tt>__begin<ins><sub><em>i</em></sub></ins></tt>, and <tt>__end<ins><sub><em>i</em></sub></ins></tt> are variables defined for exposition only; and</li>
+
+<li value="&mdash;"><em>begin-expr<ins><sub><em>i</em></sub></ins></em> and <em>end-expr<ins><sub><em>i</em></sub></ins></em> are determined as follows:
+<ul>
+<li value="&mdash">if the <em>for-range-initializer<ins><sub>i</sub></ins></em> is an expression of array type <tt>R</tt>, <em>begin-expr<ins><sub><em>i</em></sub></ins></em> and <em>end-expr<ins><sub><em>i</em></sub></ins></em> are <tt>__range<ins><sub><em>i</em></sub></ins></tt>
+and <tt>__range<ins><sub><em>i</em></sub></ins> + __bound</tt>, respectively, where <tt>__bound</tt> is the array bound. If <tt>R</tt> is an array of unknown size or an array of incomplete type, the program is ill-formed;</li>
+<li value="&mdash">if the <em>for-range-initializer<ins><sub>i</sub></ins></em> is an expression of class type <tt>C</tt>, the <em>unqualified-id</em>s <tt>begin</tt> and <tt>end</tt> are
+looked up in the scope of <tt>end</tt> as if by class member access lookup (3.4.5), and if either (or both)
+finds at least one declaration, <em>begin-expr<ins><sub><em>i</em></sub></ins></em> and <em>end-expr<ins><sub><em>i</em></sub></ins></em> are <tt>__range<ins><sub><em>i</em></sub></ins>.begin()</tt> and <tt>__range<ins><sub><em>i</em></sub></ins>.end()</tt>,
+respectively;</li>
+<li value="&mdash">
+otherwise, <em>begin-expr<ins><sub><em>i</em></sub></ins></em> and <em>end-expr<ins><sub><em>i</em></sub></ins></em> are <tt>begin(__range<ins><sub><em>i</em></sub></ins>)</tt> and <tt>end(__range<ins><sub><em>i</em></sub></ins>)</tt>, respectively, where
+<tt>begin</tt> and <tt>end</tt> are looked up in the associated namespaces (3.4.2).
+</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+Editor's note: the added bullet items are verbose, but we feel that this is necessary to remain rigorous.
+
+
+<h3>References</h3>
+<p>[<a id="EWG43">EWG43</a>] &#8220;Evolution issue 43&#8220;: <a href="http://wg21.link/ewg43">wg21.link/ewg43</a></p>
+<p>[<a id="DEMO1">DEMO1</a>] &#8220;Demo with Clang on Wandbox&#8220;: <a href="http://melpon.org/wandbox/permlink/N3RFxG6AOzeSGoaQ">melpon.org/wandbox/permlink/N3RFxG6AOzeSGoaQ</a></p>
+
+
+
+</body>
+</html>
