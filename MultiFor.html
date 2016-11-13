@@ -208,12 +208,11 @@ where
 <li value="&mdash;"><ins><em>for-range-extractor-seq</em> is a sequence of <em>&nbsp;n &nbsp;for-range-extractor</em>s (with <em>n</em> greater or equal to 1), separated by semicolons, whose respective nonterminal components
 are addressed using an index, i.e. <em>for-range-declaration<sub>i</sub></em> and <em>for-range-initializer<sub>i</sub></em>; </ins></li>
 
-<li value="&mdash;"><ins>there are <em>n</em> definitions of <tt>__range</tt><sub><em>i</em></sub>, <tt>__begin</tt><sub><em>i</em></sub>, <tt>__end</tt><sub><em>i</em></sub>
-and <em>for-range-declaration<sub>i</sub></em> initialized with 
-<em>for-range-initializer<sub>i</sub></em>, <em>begin-expr<sub>i</sub></em>, <em>end-expr<sub>i</sub></em> and <tt>*__begin</tt><sub><em>i</em></sub>, respectively, all in order of increasing <em>i</em>; </ins></li>
+<li value="&mdash;"><ins>there are <em>n</em> definitions of each of <tt>__range</tt><sub><em>i</em></sub>, <tt>__begin</tt><sub><em>i</em></sub> and <tt>__end</tt><sub><em>i</em></sub> initialized with 
+<em>for-range-initializer<sub>i</sub></em>, <em>begin-expr<sub>i</sub></em> and <em>end-expr<sub>i</sub></em>, respectively, all in order of increasing <em>i</em>; </ins></li>
 
-<li value="&mdash;"><ins>the <em>condition</em> of the <tt>for</tt> loop is the logic conjunction of <tt>__begin<sub><em>i</em></sub> != __end<sub><em>i</em></sub></tt> for <em>i</em> 
-in [1, <em>n</em>] in order of increasing <em>i</em>, and the <tt>for</tt> loop's <em>expression</em> increments all <tt>__begin</tt><sub><em>i</em></sub> in order of increasing <em>i</em>;</ins></li>
+<li value="&mdash;"><ins>the <em>condition</em> of the <tt>for</tt> loop is the logic conjunction of <tt>__begin<sub><em>i</em></sub> != __end<sub><em>i</em></sub></tt> for all <em>i</em> 
+ in order of increasing <em>i</em>, and the <tt>for</tt> loop's <em>expression</em> increments all <tt>__begin</tt><sub><em>i</em></sub> in order of increasing <em>i</em>;</ins></li>
 
 <li value="&mdash;">if <del>the</del> <em>for-range-initializer<ins><sub>i</sub></ins></em> is an <em>expression</em>, it is regarded as if it were surrounded by parentheses (so
 that a comma operator cannot be reinterpreted as delimiting two init-declarators);</li>
