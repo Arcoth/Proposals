@@ -203,20 +203,24 @@ simultaneity of the iterations, but we feel that the latter is too much of a goo
       auto &&__range<sub><ins><em>1</em></ins></sub> = <em>for-range-initializer<sub><ins><em>1</em></ins></sub></em> ;
       auto __begin<ins><sub><em>1</em></sub></ins> = <em>begin-expr<sub><ins>1</ins></sub></em> ;
       auto __end<ins><sub><em>1</em></sub></ins> = <em>end-expr<sub><ins>1</ins></sub></em> ;
-<ins>      <em>&middot;&middot;&middot;</em>
-      auto &&__range<sub><em>n</em></sub> = <em>for-range-initializer<sub>n</sub></em> ;
-      auto __begin<sub><em>n</em></sub> = <em>begin-expr<sub>n</sub></em> ;
-      auto __end<sub><em>n</em></sub> = <em>end-expr<sub>n</sub></em> ;</ins>
-      <del>for</del> <ins>if</ins> ( <del>;</del> __begin<ins><sub><em>1</em></sub></ins> != __end<ins><sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && __begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub></ins> <del>; ++__begin</del> ) <ins>do</ins> {
-            <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub>;
-<ins>            <em>&middot;&middot;&middot;</em>
-            <em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub>;</ins>
-            <em>statement</em>
-      } <ins>while ( ((void)++__begin<sub><em>1</em></sub>, __begin<sub><em>1</em></sub>) != __end<sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && ((void)++__begin<sub><em>n</em></sub>, __begin<sub><em>n</em></sub>) != __end<sub><em>n</em></sub> );</ins>
+      <ins>if (__begin<sub><em>1</em></sub> != __end<sub><em>1</em></sub>) {</ins>
+<ins>        <em>&middot;&middot;&middot;</em>
+          auto &&__range<sub><em>n</em></sub> = <em>for-range-initializer<sub>n</sub></em> ;
+          auto __begin<sub><em>n</em></sub> = <em>begin-expr<sub>n</sub></em> ;
+          auto __end<sub><em>n</em></sub> = <em>end-expr<sub>n</sub></em> ;</ins>
+          <ins>if (__begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub>) </ins>
+            <del>for ( ; __begin != __end; ++__begin )</del> <ins>do</ins> {
+              <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub>;
+<ins>              <em>&middot;&middot;&middot;</em>
+              <em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub>;</ins>
+              <em>statement</em>
+            } <ins>while ( ((void)++__begin<sub><em>1</em></sub>, __begin<sub><em>1</em></sub>) != __end<sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && ((void)++__begin<sub><em>n</em></sub>, __begin<sub><em>n</em></sub>) != __end<sub><em>n</em></sub> );</ins>
+        <em>&middot;&middot;&middot;</em>
+      }
 }
 </pre>
 
-<ins>[<em>Note:</em> the loop condition ensures that no superfluous increments occur.  &mdash; <em>end note</em>]</ins>
+<ins>[<em>Note:</em> the loop condition and the nested <tt>if</tt> statements ensure that no superfluous increments or evaluations occur.  &mdash; <em>end note</em>]</ins>
 where
 
 <ul>
