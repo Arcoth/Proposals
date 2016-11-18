@@ -7,6 +7,7 @@ body { color: #000000; background-color: #FFFFFF; }
 ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
 del, del * { text-decoration:line-through; background-color:#FFA0A0 }
 #hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+#hidedel:checked ~ * ins, #hidedel:checked ~ * ins * { background-color: transparent; font-weight:normal; }
 
 p, li, blockquote {
     font-family: "sans", Times, serif;
@@ -171,14 +172,16 @@ constexpr auto compose(R&amp;... r) {
 but this clashes too strongly with the syntax of declarations with multiple declarators. Yet again, one can use <tt>|</tt> to underline the 
 simultaneity of the iterations, but we feel that the latter is too much of a good thing and would cause confusion (and syntactic ambiguity).</p>
 
-<h4>Semantics</h4><p>The evaluation of all operations is carried out in order of increasing indexes.</p>
+<h4>Semantics</h4><p>The evaluation of all operations is carried out in ascending order of indices. No evaluations are performed unless necessary; that is,
+if the first range is empty, the second range expression is not evaluated, and if a range is exhausted, no further increments are performed.</p>
 <p>Furthermore the loop runs as long as each range is not exhausted. That is, in the above example, the <tt>transform</tt>-equivalent is actually</p>
 <pre class="extract">
 <code class="cpp">transform(begin(S), end(S), begin(R), end(R), [] (auto x) {return abs(x);});
 </code></pre>
 
-
 <h3>Proposed wording</h3>
+
+<input id="hidedel" type="checkbox">Don't show differences<br><br>
 
 6.5 [stmt.iter]&para;1:
 <blockquote class="std">
@@ -209,10 +212,10 @@ simultaneity of the iterations, but we feel that the latter is too much of a goo
           <ins>auto __begin<sub><em>n</em></sub> = <em>begin-expr<sub>n</sub></em> ;</ins>
           <ins>auto __end<sub><em>n</em></sub> = <em>end-expr<sub>n</sub></em> ;</ins>
           <ins>if (__begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub>) {</ins>
-            <del>for ( ; __begin != __end; ++__begin )</del> <ins>do</ins> {
-              <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub>;
+            <del>for ( ; __begin != __end; ++__begin )</del><ins>do</ins> {
+              <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub> ;
               <ins><em>&middot;&middot;&middot;</em></ins>
-              <ins><em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub>;</ins>
+              <ins><em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub> ;</ins>
               <em>statement</em>
             } <ins>while ( ((void)++__begin<sub><em>1</em></sub>, __begin<sub><em>1</em></sub>) != __end<sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && ((void)++__begin<sub><em>n</em></sub>, __begin<sub><em>n</em></sub>) != __end<sub><em>n</em></sub> );</ins>
           <ins>}</ins>
@@ -220,15 +223,11 @@ simultaneity of the iterations, but we feel that the latter is too much of a goo
       <ins>}</ins>
 }
 </pre>
-
-<ins>[<em>Note:</em> the loop condition and the nested <tt>if</tt> statements ensure that no superfluous increments or evaluations occur.  &mdash; <em>end note</em>]</ins>
-where
-
-<ul>
-<li value="&mdash;"><ins><em>for-range-extractor-seq</em> is a sequence of <em>&nbsp;n &nbsp;for-range-extractor</em>s (with <em>n</em> greater or equal to 1), separated by semicolons, whose respective nonterminal components
-are addressed using an index, i.e. <em>for-range-declaration<sub>i</sub></em> and <em>for-range-initializer<sub>i</sub></em>; </ins></li>
-</ul>
-<ins>and where, for all <em>i</em>,</ins>
+<del>where</del>
+<ins>[<em>Note:</em> the loop condition and the nested <tt>if</tt> statements ensure that no superfluous increments or evaluations occur.  &mdash; <em>end note</em>]
+[<em>Note:</em> the ellipsis stands for repetition of the preceding pattern for indices [<em>2 .. n-1</em>] in ascending order, and if <em>n = 1</em>, the succeeding, explicit repetition does not occur. &mdash; <em>end note</em>]
+In the above code, <em>for-range-extractor-seq</em> is a sequence of <em>&nbsp;n &nbsp;for-range-extractor</em>s (with <em>n</em> greater or equal to 1), separated by semicolons, whose respective nonterminal components
+are addressed using an index, i.e. <em>for-range-declaration<sub>i</sub></em> and <em>for-range-initializer<sub>i</sub></em>, and for all <em>i</em>,</ins>
 <ul>
 <li value="&mdash;">if <del>the</del> <em>for-range-initializer<ins><sub>i</sub></ins></em> is an <em>expression</em>, it is regarded as if it were surrounded by parentheses (so
 that a comma operator cannot be reinterpreted as delimiting two init-declarators);</li>
