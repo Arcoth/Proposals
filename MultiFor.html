@@ -78,7 +78,7 @@ p.grammarrrhs tt { font-style:normal }
 <p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
 DxxxxR0<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
-2016-11-13</p>
+2016-11-18</p>
 </div>
 
 <h2>Range-based for with multiple ranges</h2>
@@ -90,7 +90,7 @@ This paper presents a simple generalization of the wording to allow this. Analog
 <p>Many (even basic) algorithms operate on multiple ranges simultaneously, which is affirmed by various STL templates like <tt>inner_product</tt> or <tt>transform</tt>. 
 We would therefore like to have range-based for applicable in the same manner:</p>
 <pre class="extract">
-<code>transform(begin(S), end(S), begin(R), [] (auto x) {return abs(x);});
+<code class="cpp">transform(begin(S), end(S), begin(R), [] (auto x) {return abs(x);});
 
 // vs
 
@@ -98,19 +98,7 @@ for (auto& i : R; auto j : S)
 	i = abs(j);
 </code></pre>
 
-<h3>Design decisions</h3>
-
-<h4>Syntax</h4><p>Separation of the individual ranges and variables is done as proposed in issue 43, using a semicolon. Alternatively a comma could be used,
-but this clashes too strongly with the syntax of declarations with multiple declarators. Yet again, one can use <tt>|</tt> to underline the 
-simultaneity of the iterations, but we feel that the latter is too much of a good thing and would cause confusion (and syntactic ambiguity).</p>
-
-<h4>Semantics</h4><p>The evaluation of all operations is carried out in order.</p>
-<p>Furthermore the loop runs as long as each range is not exhausted. That is, in the above example, the <tt>transform</tt>-equivalent is actually</p>
-<pre class="extract">
-<code>transform(begin(S), end(S), begin(R), end(R), [] (auto x) {return abs(x);});
-</code></pre>
-
-<h3>Library alternative</h3>
+<h4>Library alternative</h4>
 Given decomposition declarations, we can write
 <pre class="extract">
 <code>for (auto [a, b, c] : compose(X, Y, Z))
@@ -122,7 +110,7 @@ A sample implementation of <tt>compose</tt>:
 <code>template &lt;typename...&gt;
 struct ComposedIterator;
 
-// Not an InputIterator, merely auxiliary
+// Not an InputIterator, merely exploiting the definition of range-based for
 template &lt;typename... Iter, std::size_t... indices&gt;
 struct ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Iter...&gt; : std::tuple&lt;Iter...&gt; {
 	using std::tuple&lt;Iter...&gt;::tuple;
@@ -131,11 +119,8 @@ struct ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Iter...&gt; : 
 		return *this;
 	}
 	template &lt;typename... Sentinels&gt;
-	constexpr bool operator==(ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Sentinels...&gt; const&amp; other) const {
-		return ((std::get&lt;indices&gt;(*this) == std::get&lt;indices&gt;(other)) || ...); }
-	template &lt;typename... Sentinels&gt;
 	constexpr bool operator!=(ComposedIterator&lt;std::index_sequence&lt;indices...&gt;, Sentinels...&gt; const&amp; other) const {
-		return !(*this == other); }
+		return ((std::get&lt;indices>(*this) != std::get&lt;indices>(other)) && ...); }
 	constexpr auto operator*() {
 		return std::forward_as_tuple(*std::get&lt;indices&gt;(*this)...);
 	}
@@ -157,9 +142,28 @@ constexpr auto compose(R&amp;... r) {
 	                    ComposedIterator&lt;std::make_index_sequence&lt;sizeof...(R)&gt;, decltype(end(r))...&gt;&gt;{{{begin(r)...}}, {{end(r)...}}};
 }
 </code></pre>
-This already works under Clang. <sup><a href="#DEMO1">DEMO1</a></sup> However, this approach is slightly less powerful in that it allows the variables to take arbitrary types, and isn't as
-syntactically concise as the proposed form. It is even counterintuitive in that it provides references to the range's elements although no <em>ref-qualifier</em> is present in the decomposition declaration.
-(We could introduce <tt>compose_ref</tt> and <tt>compose_value</tt>, but that would not change the fact that <tt>compose_ref</tt> requires no <em>ref-qualifier</em>.)
+<p>This already works under Clang. <sup><a href="#DEMO1">DEMO1</a></sup> However, we feel this approach is subpar because it&hellip;</p>
+<ul>
+<li>&hellip;allows the variables to take arbitrary types, where we would like to use concrete ones;</li>
+<li>&hellip;does not allow for range rvalues unless we implement to move from them (storing a reference does not extend their lifetime beyound that of <tt>__range</tt>'s initializer);</li>
+<li>&hellip;does not allow for <em>braced-init-lists</em>, unless we create 2<sup><em>x</em></sup> overloads of <tt>compose</tt> that have corresponding <tt>initializer_list&lt;T></tt> parameters;</li>
+<li>&hellip;is syntactically less concise; especially with more complex <em>range-initializer</em>s, it can take longer than the blink of an eye to match those to the corresponding identifiers;</li>
+<li>&hellip;is counterintuitive in that it provides references to the range's elements although no <em>ref-qualifier</em> is present in the decomposition declaration.
+(We could introduce <tt>compose_ref</tt> and <tt>compose_value</tt>, but that would not change the fact that <tt>compose_ref</tt> requires no <em>ref-qualifier</em>.)</li>
+</ul>
+<p>Hence core solution is significantly better than the above approach.</p>
+
+<h3>Design decisions</h3>
+
+<h4>Syntax</h4><p>Separation of the individual ranges and variables is done as proposed in issue 43, using a semicolon. Alternatively a comma could be used,
+but this clashes too strongly with the syntax of declarations with multiple declarators. Yet again, one can use <tt>|</tt> to underline the 
+simultaneity of the iterations, but we feel that the latter is too much of a good thing and would cause confusion (and syntactic ambiguity).</p>
+
+<h4>Semantics</h4><p>The evaluation of all operations is carried out in order of increasing indexes.</p>
+<p>Furthermore the loop runs as long as each range is not exhausted. That is, in the above example, the <tt>transform</tt>-equivalent is actually</p>
+<pre class="extract">
+<code class="cpp">transform(begin(S), end(S), begin(R), end(R), [] (auto x) {return abs(x);});
+</code></pre>
 
 
 <h3>Proposed wording</h3>
@@ -185,14 +189,13 @@ syntactically concise as the proposed form. It is even counterintuitive in that 
 
 <pre class="example">{
       auto &&__range<sub><ins><em>1</em></ins></sub> = <em>for-range-initializer<sub><ins><em>1</em></ins></sub></em> ;
-<ins>      <em>&middot;&middot;&middot;</em>
-      auto &&__range<sub><em>n</em></sub> = <em>for-range-initializer<sub>n</sub></em> ;</ins>
       auto __begin<ins><sub><em>1</em></sub></ins> = <em>begin-expr<sub><ins>1</ins></sub></em> ;
       auto __end<ins><sub><em>1</em></sub></ins> = <em>end-expr<sub><ins>1</ins></sub></em> ;
 <ins>      <em>&middot;&middot;&middot;</em>
+      auto &&__range<sub><em>n</em></sub> = <em>for-range-initializer<sub>n</sub></em> ;
       auto __begin<sub><em>n</em></sub> = <em>begin-expr<sub>n</sub></em> ;
       auto __end<sub><em>n</em></sub> = <em>end-expr<sub>n</sub></em> ;</ins>
-      for ( ; __begin<ins><sub><em>1</em></sub></ins> != __end<ins><sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && __begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub></ins> ; ++__begin<sub><ins><em>n</em></ins></sub><ins>, <em>&middot;&middot;&middot;</em>, ++__begin<sub><em>n</em></sub></ins> )</ins> {
+      for ( ; __begin<ins><sub><em>1</em></sub></ins> != __end<ins><sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && __begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub></ins> ; ++__begin<sub><ins><em>1</em></ins></sub><ins>, <em>&middot;&middot;&middot;</em>, ++__begin<sub><em>n</em></sub></ins> )</ins> {
             <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub>;
 <ins>            <em>&middot;&middot;&middot;</em>
             <em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub>;</ins>
@@ -211,8 +214,10 @@ are addressed using an index, i.e. <em>for-range-declaration<sub>i</sub></em> an
 <em>for-range-initializer<sub>i</sub></em>, <em>begin-expr<sub>i</sub></em> and <em>end-expr<sub>i</sub></em>, respectively, all in order of increasing <em>i</em>; </ins></li>
 
 <li value="&mdash;"><ins>the <em>condition</em> of the <tt>for</tt> loop is the logic conjunction of <tt>__begin<sub><em>i</em></sub> != __end<sub><em>i</em></sub></tt> for all <em>i</em> 
- in order of increasing <em>i</em>, and the <tt>for</tt> loop's <em>expression</em> increments all <tt>__begin</tt><sub><em>i</em></sub> in order of increasing <em>i</em>;</ins></li>
-
+ in order of increasing <em>i</em>, and the <tt>for</tt> loop's <em>expression</em> increments all <tt>__begin</tt><sub><em>i</em></sub> in order of increasing <em>i</em>,</ins></li>
+</ul>
+<ins>and where, for all <em>i</em>,</ins>
+<ul>
 <li value="&mdash;">if <del>the</del> <em>for-range-initializer<ins><sub>i</sub></ins></em> is an <em>expression</em>, it is regarded as if it were surrounded by parentheses (so
 that a comma operator cannot be reinterpreted as delimiting two init-declarators);</li>
 
@@ -228,17 +233,27 @@ finds at least one declaration, <em>begin-expr<ins><sub><em>i</em></sub></ins></
 respectively;</li>
 <li value="&mdash">
 otherwise, <em>begin-expr<ins><sub><em>i</em></sub></ins></em> and <em>end-expr<ins><sub><em>i</em></sub></ins></em> are <tt>begin(__range<ins><sub><em>i</em></sub></ins>)</tt> and <tt>end(__range<ins><sub><em>i</em></sub></ins>)</tt>, respectively, where
-<tt>begin</tt> and <tt>end</tt> are looked up in the associated namespaces (3.4.2).
-</li>
-</ul>
-</li>
-</ul>
+<tt>begin</tt> and <tt>end</tt> are looked up in the associated namespaces (3.4.2). [<em>Note:</em> &hellip; <em>&mdash; end note</em>]
+</li></ul></li></ul>
+[ <em>Example</em>:
+<pre class="example">
+int array[5] = { 1, 2, 3, 4, 5 };
+for (int& x : array)
+    x *= 2;
+<ins>
+std::set&lt;int> set{ 2, 4, 6, 8, 10 };
+for (int& x : array; int y : set)
+    x += y;</ins></pre>&mdash; <em>end example</em> ]
 </blockquote>
 
+3.3.3 [basic.scope.block]&para;4:
+<blockquote class="std">
+Names declared in the <em>init-statement</em>, the <em>for-range-declaration</em><ins>s</ins>, and […]
+</blockquote>
 
 <h3>References</h3>
 <p>[<a id="EWG43">EWG43</a>] &#8220;Evolution issue 43&#8220;: <a href="http://wg21.link/ewg43">wg21.link/ewg43</a></p>
-<p>[<a id="DEMO1">DEMO1</a>] &#8220;Demo with Clang on Wandbox&#8220;: <a href="http://melpon.org/wandbox/permlink/N3RFxG6AOzeSGoaQ">melpon.org/wandbox/permlink/N3RFxG6AOzeSGoaQ</a></p>
+<p>[<a id="DEMO1">DEMO1</a>] &#8220;Demo with Clang on Wandbox&#8220;: <a href="http://melpon.org/wandbox/permlink/l2BRXxXfaTh65g3b">melpon.org/wandbox/permlink/l2BRXxXfaTh65g3b</a></p>
 
 
 
