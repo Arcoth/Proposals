@@ -102,7 +102,7 @@ for (auto& i : R; auto j : S)
 
 <h4>Syntax</h4><p>Separation of the individual ranges and variables is done as proposed in issue 43, using a semicolon. Alternatively a comma could be used,
 but this clashes too strongly with the syntax of declarations with multiple declarators. Yet again, one can use <tt>|</tt> to underline the 
-simultaneity of the iterations, but we feel that the latter is too much of a good thing and would cause confusion.</p>
+simultaneity of the iterations, but we feel that the latter is too much of a good thing and would cause confusion (and syntactic ambiguity).</p>
 
 <h4>Semantics</h4><p>The evaluation of all operations is carried out in order.</p>
 <p>Furthermore the loop runs as long as each range is not exhausted. That is, in the above example, the <tt>transform</tt>-equivalent is actually</p>
@@ -117,8 +117,7 @@ Given decomposition declarations, we can write
      // ...
 </code></pre>
 
-A sample implementation:
-of <tt>compose</tt>:
+A sample implementation of <tt>compose</tt>:
 <pre class="extract">
 <code>template &lt;typename...&gt;
 struct ComposedIterator;
@@ -235,7 +234,6 @@ otherwise, <em>begin-expr<ins><sub><em>i</em></sub></ins></em> and <em>end-expr<
 </li>
 </ul>
 </blockquote>
-Editor's note: the added bullet items are verbose, but we feel that this is necessary to remain rigorous.
 
 
 <h3>References</h3>
