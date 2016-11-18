@@ -98,6 +98,18 @@ for (auto& i : R; auto j : S)
 	i = abs(j);
 </code></pre>
 
+<p>This also allows for some interesting idioms that haven't been explored yet:
+<pre class="extract">
+<code class="cpp">for (auto& element : R; auto index : indexes_for(R))
+    // ...
+    
+// instead of
+    
+for (std::size_t i = 0; i &lt; std::size(R); ++i)
+    // works only if R is random access; use R[i] for element
+</code></pre></p>
+
+
 <h4>Library alternative</h4>
 Given decomposition declarations, we can write
 <pre class="extract">
@@ -195,26 +207,21 @@ simultaneity of the iterations, but we feel that the latter is too much of a goo
       auto &&__range<sub><em>n</em></sub> = <em>for-range-initializer<sub>n</sub></em> ;
       auto __begin<sub><em>n</em></sub> = <em>begin-expr<sub>n</sub></em> ;
       auto __end<sub><em>n</em></sub> = <em>end-expr<sub>n</sub></em> ;</ins>
-      for ( ; __begin<ins><sub><em>1</em></sub></ins> != __end<ins><sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && __begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub></ins> ; ++__begin<sub><ins><em>1</em></ins></sub><ins>, <em>&middot;&middot;&middot;</em>, ++__begin<sub><em>n</em></sub></ins> )</ins> {
+      <del>for</del> <ins>if</ins> ( <del>;</del> __begin<ins><sub><em>1</em></sub></ins> != __end<ins><sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && __begin<sub><em>n</em></sub> != __end<sub><em>n</em></sub></ins> <del>; ++__begin</del> ) <ins>do</ins> {
             <em>for-range-declaration<sub><ins>1</ins></sub></em> = *__begin<sub><ins><em>1</em></ins></sub>;
 <ins>            <em>&middot;&middot;&middot;</em>
             <em>for-range-declaration<sub>n</sub></em> = *__begin<sub><ins><em>n</em></ins></sub>;</ins>
             <em>statement</em>
-      }
+      } <ins>while ( ((void)++__begin<sub><em>1</em></sub>, __begin<sub><em>1</em></sub>) != __end<sub><em>1</em></sub> && <em>&middot;&middot;&middot;</em> && ((void)++__begin<sub><em>n</em></sub>, __begin<sub><em>n</em></sub>) != __end<sub><em>n</em></sub> );</ins>
 }
 </pre>
 
+<ins>[<em>Note:</em> the loop condition ensures that no superfluous increments occur.  &mdash; <em>end note</em>]</ins>
 where
 
 <ul>
 <li value="&mdash;"><ins><em>for-range-extractor-seq</em> is a sequence of <em>&nbsp;n &nbsp;for-range-extractor</em>s (with <em>n</em> greater or equal to 1), separated by semicolons, whose respective nonterminal components
 are addressed using an index, i.e. <em>for-range-declaration<sub>i</sub></em> and <em>for-range-initializer<sub>i</sub></em>; </ins></li>
-
-<li value="&mdash;"><ins>there are <em>n</em> definitions of each of <tt>__range</tt><sub><em>i</em></sub>, <tt>__begin</tt><sub><em>i</em></sub> and <tt>__end</tt><sub><em>i</em></sub> initialized with 
-<em>for-range-initializer<sub>i</sub></em>, <em>begin-expr<sub>i</sub></em> and <em>end-expr<sub>i</sub></em>, respectively, all in order of increasing <em>i</em>; </ins></li>
-
-<li value="&mdash;"><ins>the <em>condition</em> of the <tt>for</tt> loop is the logic conjunction of <tt>__begin<sub><em>i</em></sub> != __end<sub><em>i</em></sub></tt> for all <em>i</em> 
- in order of increasing <em>i</em>, and the <tt>for</tt> loop's <em>expression</em> increments all <tt>__begin</tt><sub><em>i</em></sub> in order of increasing <em>i</em>,</ins></li>
 </ul>
 <ins>and where, for all <em>i</em>,</ins>
 <ul>
