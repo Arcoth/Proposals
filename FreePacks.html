@@ -79,12 +79,12 @@ Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
 </div>
 
 <h2>Free packs</h2>
-<p>Parameter packs were introduced with C++11 and have proven to be an immensely useful tool, particularly in writing generic libraries.
+<p>Parameter packs were introduced with C++11 and have proven to be an immensely useful tool, particularly in generic programming.
 However, their introduction is only possible via a (deduced) template parameter, which often makes for tedious circumlocutions. 
 We discuss syntax and design of "free" packs that can be declared and retrieved ad hoc, and provide corresponding wording. 
 
 <br><br>This topic is also discussed in P0341.<sup><a href="#P0341">[P0341]</a></sup>
-Our proposal presents a different approach.
+Our proposal presents a similar, but more concrete approach.</p>
 
 <h3>Motivation</h3>
 
@@ -105,40 +105,91 @@ We need such a pack; but the only practical way it can be obtained is by having 
 <p>This occurs over and over in code that operates on tuples or packs - if the reader visits an arbitrary Stackoverflow question about variadic templates or tuples,
 she has a good chance of seeing this technique demonstrated.
 <sup><a href="#SO1">[SO1]</a></sup><sup><a href="#SO2">[SO2]</a></sup><sup><a href="#SO3">[SO3]</a></sup><sup><a href="#SO4">[SO4]</a></sup><sup><a href="#SO5">[SO5]</a></sup>
-Introducing free packs would greatly simplify a lot of meta programming code.</p> 
+Introducing free packs would simplify a lot of meta programming code.</p> 
 
-<h3>Design</h3>
-<p>We propose that "free" packs are a new kind of entity that can be defined at block, class and namespace scope:</p>
-<pre class="extract"><code class="c++">// Example definitions:
-typename... t = {int, float, double};
-int... i = {1, 2, 3};
+<h3>Scope</h3>
+<p>Free packs will be a new kind of entity that can be defined at namespace scope, block scope or class scope. There are three variants:</p>
+<ul><li><b>Value packs</b> are packs of objects or references, subject to all usual declaration specifiers (specifically <tt>constexpr</tt>). There are non-static data member packs, too. </li>
+<li><b>Type packs</b> are packs of types. Simples.</li>
+<li><b>Pack templates</b> are templates of packs, i.e. their specializations can be expanded. </li></ul>
+<p>Template packs (that is, packs of template names) are not proposed for reasons described below. </p>
 
-// Pack templates:
-template &lt;size_t n>
-size_t... make_indices = {make_indices&lt;n/2>..., (make_indices&lt;(n+1)/2> + n/2)...};
-template &lt;> size_t... make_indices&lt;1> = {0};
-template &lt;> size_t... make_indices&lt;0> = {};
+<h3>Syntax</h3>
+<h4>Value packs</h4>
+<p>&hellip;will be declared in the exact same manner as function parameter packs, with no unexpanded parameter packs necessary.
+They are not allowed as function parameters (which would clash with the grammar, anyway, due to the syntax for variadic functions with no comma preceding the ellipsis).</p>
+
+<p>We simultaneously propose initializers for packs (which also appertain to template and function parameter packs):</p>
+<pre class="extract"><code class="c++">int... i = {1, 2, 3}; // Ok: pack of size 3
+int... j{1, 2, 3}; // Ok: pack of size 3
+int ...h{}, l; // Ok: empty pack and bog-standard int named l
 
 template &lt;typename... T>
-size_t... indices_for = {make_indices&lt;sizeof...(T)>...};</code></pre>
+T... t = {(std::void_t&lt;T>(), 0)...}; // Ok: pack of size sizeof...(T), all initialized with 0
+</code></pre>
+<p>In the last example, we have shown the syntax for declaring a pack that is an expansion itself. Since the pack initializer still appertains to the entire pack 
+(not individual declarators generated), we must ensure that the length of the initializer list is appopriate ourselves. (The above can be made syntactically nicer by using an
+auxiliary function template <tt>for_</tt>, in which case the initializer becomes <tt>{ for_&lt;T>(0)... }</tt>). (See also core issue 1520.<sup><a href="#CWG1520">[CWG1520]</a></sup>)</p>
+
+<p>As under current gammar, the ellipsis appertains to the declarator. The <em>init-declarator</em> must be copy-list-initialized,
+either with a list of expressions implicitly convertible to the value pack's element type(s), or with a list of types that will be the type pack's contents. </p>
+
+<h4>Type packs</h4>
+<p>&hellip;have the following syntax:</p>
+<pre class="extract"><code>using... t = {int, float, void};
+</code></pre>
+<p>The semantics are very similar to those of usual <em>alias-declaration</em>s;
+in particular, the type list shall not define a class or enumeration if the declaration is a <em>template-declaration</em>,
+and the point of declaration of the identifier is after the <em>braced-init-list</em>.</p>
+
+
+<h3>Design</h3>
+
+<pre class="extract"><code class="c++">// Example definitions:
+template &lt;size_t n>
+constexpr size_t... make_indices = {make_indices&lt;n/2>..., (make_indices&lt;(n+1)/2> + n/2)...};
+template &lt;> constexpr size_t... make_indices&lt;1> = {0};
+template &lt;> constexpr size_t... make_indices&lt;0> = {};
+
+template &lt;typename... T>
+constexpr size_t... indices_for = {make_indices&lt;sizeof...(T)>...};
+
+struct X {
+	int... i{1, 2};
+	X(int a, int b) : i{a, b} {}
+	// X(int a) : i{a} () // error: inconsistent length given by constructors/mem-initializers
+};
+</code></pre>
                                                     
+<p>The size of the pack must be inferred, and it is either from the length of the initializer list, or from the length of an unexpanded pack within the 
+<em>decl-specifier-seq</em>, or from a <em>mem-initializer</em> in a constructor (or both, in which case the length's must coincide). </p>
+
+<p>Note that initializers for value packs are only necessary when the pack is not a non-static data member, and its type does not contain an unexpanded pack, 
+because in such cases, the pack must be empty, which is better indicated with <tt>= {}</tt>. </p>
+
 <p>Now consider our transform template's new implementation:</p>
 <pre class="extract"><code class="c++">template &lt;typename... T, typename Func>
 auto transform(std::tuple&lt;T...> t, Func f) {
     return make_tuple(f(get&lt;indices_for&lt;T...>>(t))...);
 }</code></pre>
+This could be further simplified if <tt>tuple</tt> was given a static data member pack <tt>indices</tt>:
 
-<p>Or one of P0341's examples:</p>
+<pre class="extract"><code class="c++">template &lt;typename... T, typename Func>
+auto transform(std::tuple&lt;T...> t, Func f) {
+    return make_tuple(f(get&lt;t....indices>(t))...);
+}</code></pre>
+
+<p>Or consider one of P0341's examples:</p>
 <pre class="extract"><code class="c++">template &lt;int> struct accept_all {
-    constexpr accept_all(auto&&);
+    accept_all(auto&&);
 };
 	
 template &lt;size_t i, typename U, typename... T> 
-constexpr U&& ith_argument(accept_all&lt;get_indices&lt;i>>..., U&& u, T&&...) {
+U&& ith_argument(accept_all&lt;get_indices&lt;i>>..., U&& u, T&&...) {
     return std::forward&lt;U>(u);}</code></pre>
     
 <h4>Pack templates</h4>
-<p>Demonstrated above are pack templates, the semantics of which are defined to be very similar to alias templates: They don't introduce a <em>template-id</em> (and thus cannot be
+<p>Demonstrated above are type pack templates, the semantics of which are defined to be very similar to alias templates: They don't introduce a <em>template-id</em> (and thus cannot be
 specialized), and they allow for the usual deduction for function templates: 
 <pre class="extract"><code>template &lt;typename T>
 typename... forwarding_ref = {T&&, T&};
@@ -152,7 +203,7 @@ f(0, i); // Ok: T = int</code></pre>
    
 <h4>Template packs?</h4>
 <p>There has been far less clamor for template packs than both type and value packs, which by contrast have definite applications (some of which are outlined in this proposal).
-They do not go well with pack templates; partly because they create the notion of a &ldquo;template template&rdquo;,leading to abhorrent invocation syntax
+They do not go well with pack templates; partly because they create the notion of a &ldquo;template template&rdquo;, leading to abhorrent invocation syntax
 in dependent contexts:  </p>
 <pre class="extract"><code>template &lt;int> struct A {};
 
@@ -168,35 +219,31 @@ struct Y {
 </code></pre> 
 <p>To avoid such monstrosities, template packs must be restricted to an extent that would make the design appear inconsistent. We therefore do not propose template packs. </p>
 
-<h4>Non-static data packs?</h4>
-<p>One of the core ideas of P0341 were non-static data member packs, as in this simple implementation of a tuple:</p>
+<h4>Non-static data packs</h4>
+<p>One of the core ideas of P0341 are non-static data member packs, as in this simple implementation of a tuple (which is also subpar, because it stores empty classes):</p>
 <pre class="extract"><code>template &lt;typename... T> struct tuple {
     T... values;
 };</code></pre>
-<p>Note that this implementation does not allow for EBO to be exploited, a commonly relied on feature of <tt>tuple</tt>. <br>Tuple expansion is named as an example were such packs would prove useful:</p>
-<pre class="extract"><code class="c++">void f(int, double, long);
-tuple&lt;double, long> tdl(3.4, 5L);
-f(2, tdl.value...); // #1</code></pre>
-<p>We can achieve a similarly terse notation using this proposal's free packs and <tt>std::get</tt>:</p>
-<pre class="extract"><code class="c++">void f(int, double, long);
-tuple&lt;double, long> tdl(3.4, 5L);
-f(2, get&lt;tdl.indices>(tdl)...); // #2  (Assuming tuple provides a corresponding member pack)
-</code></pre>
-<p>Every single application of non-static data member packs can 
-be reduced to index packs and library solutions (aka <tt>tuple</tt>). That is, the only code that vendors need to optimize for #2 to be as
-efficient as #1 is <tt>tuple</tt>'s <tt>get</tt> function. Non-static data member packs are a suggestive feature but not integral to free packs;
-we feel that this is best addressed by a follow-up paper. </p>
+<p>The fundamental issue is that we need to commit on a length of the pack somehow. We cannot use <em>mem-initializer</em>s, because different
+specializations of constructor templates could yield different lengths. Instead, either</p>
+<ul><li>the type contains an unexpanded pack, or</li></ul>
 
 <h4>A syntactical disambiguator in dependent contexts analogous to <tt>:: template</tt></h4>
 <p>As pointed out by Douglas Gregor back when this feature was first proposed in similar form,<sup><a href="#COMP1">[COMP1]</a></sup>
 allowing member packs - as this proposal does - implies that we cannot per se know whether a dependent
 <em>qualified-id</em> names e.g. a value or a pack of values. Consider </p>
-<pre class="extract"><code>template &lt;typename T1, typename T2> void g2() {
-    f(T1::members + T2::members...);
+<pre class="extract"><code>template &lt;typename T1, typename T2> void f() {
+    foo(T1::members + T2::members...);
 }</code></pre>
 <p>Both <tt>T1::members</tt> and <tt>T2::members</tt> could be packs, simultaneously or only one at a time.
-Although such pack expansions would not be technically problematic, they are ; the three aforementioned possibilities
-will all produce a well-formed instantiated function. It also makes code harder to comprehend</p>
+Although such pack expansions would not be technically problematic, they can make code harder to comprehend; the three aforementioned possibilities
+will all produce a well-formed instantiated function, having three different meanings.</p>
+
+<p>However, the problems go further than syntactic meaningfulness. Consider</p>
+<pre class="extract"><code>template &lt;typename T1, int... v> void g() {
+    foo(T1::members + v...);
+}</code></pre>
+<p>Prior to the introduction of free packs, this code unambiguously adds </p>
 
 <p>The next example demonstrates the only context in the language in which there is an ambiguity between a pack expansion and another construct (an ellipsis indicating that the
  function is variadic):</p>
@@ -204,17 +251,16 @@ will all produce a well-formed instantiated function. It also makes code harder 
     void h(typename T::members...); // variadic function or pack expansion?
 };</code></pre>
 <p>In order to avoid this, we need to mark the dependent names intended for packs separately. The syntax we propose is the following:</p>
-<ol><li><p>&ldquo;<tt>T::... x</tt>&rdquo; for a value pack,</p></li>
+<ol><li><p>&ldquo;<tt>T::... x</tt>&rdquo; and &ldquo;<tt>T. ...x</tt>&rdquo; for a value pack (the latter would not work if the white space between the dot and the ellipsis was removed, since the maximum munch rule would make it parse as &ldquo;<tt>T... .x</tt>&rdquo;),</p></li>
 <li><p>&ldquo;<tt>typename T::... x</tt>&rdquo; for a type pack, and</p></li>
 <li><p>&ldquo;<tt>T::... template x</tt>&rdquo; for a template pack.</p></li></ol>
-<p>Note how employing the ellipsis does not produce ugly results as in &ldquo;<tt>t....x</tt>&rdquo;, since <tt>::</tt> is 
-used instead of <tt>.</tt>. When we refer to a pack template, the <tt>template</tt> keyword is prepended to the ellipsis, i.e. &ldquo;<tt>T::template... x</tt>&rdquo; and 
-&ldquo;<tt>typename T::template... x</tt>&rdquo; are names for corresponding pack templates. Note that <b>there are no pack templates of templates</b>, because the syntax of their 
-invocation is extremely peculiar (<tt>T::template... template x&lt;arg1>&lt;arg2>...</tt>).<br>
-The rule of thumb to teach is that the construct immediately following <tt>::</tt> gives the kind of the entity so named: <tt>template</tt> indicates a template,
-<tt>...</tt> indicates a pack. &ldquo;<tt>template...</tt>&rdquo; is a template of <tt>...</tt> (packs), &ldquo;<tt>... template</tt>&rdquo; is a <tt>...</tt> of templates (a template pack).
-</p>
+<p>When we refer to a pack template, the <tt>template</tt> keyword is prepended to the ellipsis, i.e. &ldquo;<tt>T::template... x</tt>&rdquo; and 
+&ldquo;<tt>typename T::template... x</tt>&rdquo; are names for corresponding pack templates. </p>
 <pre class="extract"><code></code></pre>
+
+
+
+
 
 <h3>Wording</h3>
 
@@ -223,8 +269,12 @@ The rule of thumb to teach is that the construct immediately following <tt>::</t
 bit-field, template, template specialization, namespace, or <del>parameter</del> pack.</blockquote>
 
 <p>3.2 [basic.def.odr] &para;2:</p>
-<blockquote class="std">A <em>declaration</em> is a definition unless it declares [&hellip;], an explicit instantiation
-declaration (14.7.2), <del>or</del> an explicit specialization (14.7.3) whose <em>declaration</em> is not a definition<ins>, or a free pack (7.1.7)</ins>.</blockquote>
+<blockquote class="std">A <em>declaration</em> is a definition unless it declares<br>
+&nbsp;&nbsp; &hellip;,<br>
+&nbsp;&nbsp;(2.17) &nbsp;&nbsp;&mdash; [&hellip;], <del>or</del><br>
+&nbsp;&nbsp;(2.18) &nbsp;&nbsp;&mdash; [&hellip;]<del>.</del><ins>, or</ins><br>
+&nbsp;&nbsp;(2.19) &nbsp;&nbsp;&mdash; <ins>a free pack (7.1.7).</ins>
+</blockquote>
 
 <p>5.1.1 [expr.prim.general] &para;8:</p>
 <blockquote class="std">
@@ -241,6 +291,7 @@ declaration (14.7.2), <del>or</del> an explicit specialization (14.7.3) whose <e
 followed by the</del> <ins>and whose <em>unqualified-id</em> is the</ins> name of a member of either that class (9.2) or one of its base classes (Clause 10), is <del>a
 <em>qualified-id</em></del> <ins>that member</ins>; 3.4.3.1 describes name lookup for class members that appear in <em>qualified-id</em>s. <del>The result is the
 member.</del></blockquote>
+<p>(Note: this is due to the introduction of the ellipsis in the grammar production.)</p>
 
 <p>5.1.2 [expr.prim.lambda] &para;3:</p>
 <blockquote class="std">A <em>lambda-expression</em> shall not appear in an unevaluated operand (Clause 5), in a <em>template-argument</em>,
@@ -253,16 +304,18 @@ template outside its function body and default arguments<ins>, or in a <em>pack-
 <p class="grammarrhs">nested-name-specifier&nbsp; <ins><tt>...</tt><sub>opt</sub></ins> &nbsp;  <tt>template</tt> &nbsp; simple-template-id &nbsp;<tt>:: ~</tt> &nbsp; type-name</p>
 <p class="grammarrhs">&hellip;</p></blockquote>
 
+<!--
 <p>5.2.5 [expr.ref] &para;4	:</p>
 <blockquote class="std">(4.5) &nbsp; &mdash;&ensp; If <tt>E2</tt> is a member enumerator and the type of <tt>E2</tt> is <tt>T</tt>,<ins> or <tt>E2</tt> is a free value pack with element type <tt>T</tt>,</ins> the expression <tt>E1.E2</tt> is a prvalue. The type of
 <tt>E1.E2</tt> is <tt>T</tt>.</blockquote>
+-->
 
 <p>7 [dcl.dcl] &para;1:</p>
 <blockquote class="std">
 <p class="grammarlhs">block-declaration:</p>
 <p class="grammarrhs">&hellip;</p>
 <p class="grammarrhs">opaque-enum-declaration</p>
-<p class="grammarrhs"><ins>pack-declaration</ins></p>
+<p class="grammarrhs"><ins>type-pack-declaration</ins></p>
 </blockquote>
 
 <p>7.1.6.2 [dcl.type.simple] &para;1:</p>
@@ -468,6 +521,7 @@ stackoverflow.com/a/36939483/3647361</a></p>
 <a href="https://groups.google.com/d/msg/comp.std.c++/_-6X_xZlKlA/-HhvKh5ccEAJ">
 groups.google.com/d/msg/comp.std.c++/_-6X_xZlKlA/-HhvKh5ccEAJ</a></p>
 
+<p>[<a id="CWG1520">CWG1520</a>] &#8220;Alias template specialization vs pack expansion&#8220;: <a href="http://wg21.link/cwg1520">wg21.link/cwg1520</a></p>
 
 <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/styles/idea.min.css">
 <script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/highlight.min.js"></script>
