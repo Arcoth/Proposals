@@ -83,30 +83,21 @@
 			  <li>a function, or</li>
 			  <li>allocated storage, or</li>
 		  </ul></li>
-		  <li>past the end of an object&mdash;i.e. &mdash;, or</li>
-		  <li>null (this corresponds to what earlier papers called an &ldquo;empty lvalue&rdquo;, or</li>
+		  <li>past the end of an object&mdash;i.e. refer to the hypothetical past-the-end object of an array &mdash;, or</li>
+		  <li>null (this corresponds to what earlier papers called an &ldquo;empty lvalue&rdquo;), or</li>
 		  <li>invalid.</li>
       </ul>
-      This covers all different possible states of a glvalue.
+      <p>This covers all different possible states of a glvalue. Certain uses of unassigned lvalues are now defined, in particular
+            Lvalue Transformations and the unary <tt>&amp;</tt> operator.</p>
       
-      
-      
-      We propose the following concepts:
-      <ol>
-         <li>A glvalue can be <span style="font-style: italic;">assigned</span>,
-            <span style="font-style: italic;">null</span>, <span style="font-style: italic;">invalid</span> or <span style="font-style: italic;">past the end of</span> an object, exactly
-            like pointer values (as formalized in P0137).<br>
-         </li>
-         <li>Certain uses of unassigned lvalues are now defined, in particular
-            Lvalue Transformations and the unary <tt>&amp;</tt> operator.
-         </li>
-         <li> A reference shall not be
+      <h3>References</h3>
+      <p>Finally, in conjunction with the rework on reference intialization and state, we propose that a reference shall not be
             initialized with its own name. This makes code ill-formed with a
             diagnostic required - note that all common implementations already
             diagnose this as a warning. For further discussion on this topic, see
-            also SG12's mailing list.<sup><a href="#UB504">UB504</a></sup><br>
-         </li>
-      </ol>
+            also SG12's mailing list.<sup><a href="#UB504">UB504</a></sup></p>
+      
+      
       <h2>Proposed wording</h2>
       This wording is relative to N4640.
       <br>
@@ -150,7 +141,7 @@
             </li>
             <li>A <em>prvalue</em> &hellip;
             </li>
-            <li>An <em>xvalue</em> is a glvalue that <ins>usually</ins> denotes an object or bit-field whose resources can be reused (usually
+            <li>An <em>xvalue</em> is a glvalue that <ins>generally</ins> denotes an object or bit-field whose resources can be reused (usually
 because it is near the end of its lifetime). [ <em>Example</em>: Certain kinds of expressions involving rvalue
 references (8.3.2) yield xvalues, such as a call to a function whose return type is an rvalue reference or
 a cast to an rvalue reference type. &#8212; <em>end example</em> ] <ins>[<em>Note:</em>
@@ -201,9 +192,9 @@ not values<del>.</del><ins>; the latter is covered by the expression's assignmen
             </ul>
             A prvalue is never assigned. 
             An <em>invalid</em> expression is one that referred to an object or
-            region of storage that has been deallocated (3.7 [basic.stc]). Using an
-             expression that is not assigned in a context where the language expects an
-            assigned expression has undefined behavior. 
+            region of storage that has been deallocated (3.7 [basic.stc]). Using a
+             glvalue that is not assigned in a context where the language expects an
+            assigned glvalue has undefined behavior. 
          </ins>
          <br>
          <br>
