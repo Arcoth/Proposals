@@ -73,7 +73,7 @@ p.grammarrrhs tt { font-style:normal }
 </head><body>
 <div style="text-align: right; float: right;">
 <p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
-P0388R0<br>
+D0388R1<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
 2016-06-28</p>
 </div>
@@ -84,6 +84,9 @@ Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
 	
 	<h2>Permit conversions to arrays of unknown bound</h2>
 	<p>Permit conversions of arrays of known bound to pointers or references to arrays of unknown bound. This is analogous to evolution issue 118.<sup><a href="#EWG118">EWG118</a></sup></p>
+	
+	<h3>Changes from R1</h3>
+	Incorporated the suggestions made by CWG in Kona. In particular, enable brace-elision by having [dcl.init.list] ¶(3.8) deduce the type off a declaration with a corresponding initializer; and instead of creating a new paragraph 13.3.3.2 &para;5, add a bullet to &para;(3.1). 
 	
 	<h3>Motivation and impact</h3>
 	<p>As of core issue 393,<sup><a href="#CWG393">CWG393</a></sup> function parameters can be pointers or references to arrays of unknown bound.
@@ -142,120 +145,60 @@ b({1});</code></pre>
 	
 	<h3>Proposed wording</h3>
 	
+	<p>This is based on N4640.</p>
 	
 <input type="checkbox" id="hidedel">Hide deleted wording</input>
 	
-	<p>Create 4.10 [conv.ptr] &para;4 with the following content:</p>
+	<p>Create 7.11 [conv.ptr] &para;4 with the following content:</p>
 	<blockquote class="stdins">A prvalue of type &ldquo;pointer to array of <tt>N</tt>  <em>cv</em> <tt>T</tt>&ldquo; can be converted to a prvalue of type
 	&ldquo;pointer to array of unknown bound of <em>cv</em> <tt>T</tt>&ldquo;.
 	The result is a pointer to the array.	The null pointer value is converted to the null pointer value of the destination type.</blockquote>
 	
-	<p>Modify 8.5.3 [dcl.init.ref] &para;4 as follows:</p>
+	<p>Modify 11.6.3 [dcl.init.ref] &para;4 as follows:</p>
 	
 	<blockquote class="std"> Given types &ldquo;<em>cv1</em> <tt>T1</tt>&ldquo; and &ldquo;<em>cv2</em> <tt>T2</tt>&ldquo;, &ldquo;<em>cv1</em> <tt>T1</tt>&ldquo;
 	is reference-related to &ldquo;<em>cv2</em> <tt>T2</tt>&ldquo; if <tt>T1</tt> is the same type as <tt>T2</tt>, <del>or</del>
-	<tt>T1</tt> is a base class of <tt>T2</tt> <ins>or <tt>T1</tt> is an array type of unknown bound of <tt>U</tt> and <tt>T2</tt> is an
+	<tt>T1</tt> is a base class of <tt>T2</tt><ins>, or <tt>T1</tt> is an array type of unknown bound of <tt>U</tt> and <tt>T2</tt> is an
 	array type of known bound of <tt>U</tt></ins>. </blockquote>
 	
-	
-	<p>Modify 8.5.4 [dcl.init.list] &para;(3.8) as follows:</p>
+	<p>Modify 11.6.4 [dcl.init.list] &para;(3.8) as follows:</p>
 	
 	<blockquote class="std">
-Otherwise, if <tt>T</tt> is a reference type, a prvalue temporary <del>of the type referenced by <tt>T</tt></del> is copy-list-initialized or direct-list-initialized,
-depending on the kind of initialization for the reference, and the reference is bound to that temporary.
-<ins>The type of the temporary is either the type referenced by <tt>T</tt> or, if <tt>T</tt> is "array of unknown bound of <tt>U</tt>", the type "array of <tt>N U</tt>", where <tt>N</tt> is the number of elements in the initializer list.</ins></blockquote>
+		Otherwise, if <tt>T</tt> is a reference type, a prvalue <del>of the type referenced by <tt>T</tt></del> is generated. 
+		The prvalue initializes its result object by copy-list-initialization or direct-list-initialization, depending on the kind
+of initialization for the reference. The prvalue is then used to direct-initialize the reference. <ins>The type of the temporary is the type referenced by <tt>T</tt>, unless <tt>T</tt> is &ldquo;reference to array of unknown bound of <tt>U</tt>&rdquo;, in 
+which case the type of the temporary is the type of <tt>x</tt> in the declaration <tt>U x[]</tt> <em>braced-init-list</em>, where <em>braced-init-list</em> is the initializer list.</ins>
+</blockquote>
 
-<!--
-	Modify 13.3.3.1 [over.ics.best] &para;6 as indicated:
-	<blockquote class="std">
-	When the parameter has a class type and the argument expression has a derived class type,
-	the implicit conversion sequence is a derived-to-base Conversion from the derived class to the base class. <ins>When the parameter is a reference to an array of unknown bound
-	and the argument is an array of known bound, the implicit conversion sequence is a bound-strip Conversion.</ins>
-[ <em>Note</em>: There <del>is</del><ins>are</ins> no such standard conversion<ins>s</ins>; <del>this</del> derived-to-base <ins>and bound-strip</ins> Conversion<ins>s</ins> exist<del>s</del> only in the description of
-implicit conversion sequences. &mdash; <em>end note</em> ] <del>A</del> derived-to-base <ins>and bound-strip</ins> Conversion<ins>s</ins> <del>has</del><ins>have</ins> Conversion rank (13.3.3.1.1).
-	</blockquote>
--->
-	
-<!--
-	<p>Modify 13.3.3.1.4 [over.ics.ref] &para;1 as follows: </p>
-	<blockquote class="std">
-	When a parameter of reference type binds directly (8.5.3) to an argument expression, the implicit conversion
-	sequence is the identity conversion, unless
-	<ul>
-		<li>the argument expression has a type that is a derived class of the
-		parameter type, in which case the implicit conversion sequence is a derived-to-base Conversion (13.3.3.1), or</li>
-		<li><ins>the argument is an array of known bound and the parameter is a reference to an
-		array of unknown bound, in which case the implicit conversion sequence is a bound-strip Conversion (13.3.3.1)</ins>.</li>
-	</ul>
-	[ <em>Example:</em>
-	<pre class="example">
-	struct A {};
-	struct B : public A {} b;
-	int f(A&);
-	int f(B&);
-	int i = f(b);               // calls f(B&), an exact match, rather than
-	                            // f(A&), a conversion
-	                            
-	<ins>int g(int(&)[]);</ins>
-	<ins>int g(int(&)[5]);</ins>
-	<ins>int arr[5];</ins>
-	<ins>int j = g(arr);</ins>             <ins>// calls g(int(&)[5]), an exact match, rather</ins>
-	                            <ins>// than f(int(&)[]), a conversion</ins>
-	
-	</pre>	&mdash; <em>end example</em> ]
-	
-	If the parameter binds directly to the result of applying a conversion function to the
-	argument expression, the implicit conversion sequence is a user-defined conversion sequence (13.3.3.1.2),
-	with the second standard conversion sequence <del>either</del> an identity conversion <del>or</del>, <ins>unless</ins>
-	<ul>
-		<li><del>if</del> the conversion function returns an entity of a type that is a derived class of the parameter type,
-		<ins>in which case the standard conversion sequence is</ins> a derived-to-base Conversion<ins>, or</ins></li>
-		<li><ins> the conversion function returns a reference to an array of known bound and the parameter is a reference to an array of unknown bound,
-		<ins>in which case the standard conversion sequence is</ins> a bound-strip Conversion</ins>.</li>
-	</ul>	
-	</blockquote>
--->
-	
-	<p>Modify 13.3.3.1.5 [over.ics.list] &para;5 as follows:</p>
+	<p>Modify 16.3.3.1.5 [over.ics.list] &para;5 as follows:</p>
 	<blockquote class="std">
 	Otherwise, if the parameter type is &ldquo;array of <tt>N X</tt>&ldquo; <ins>or &ldquo;array of unknown bound of <tt>X</tt>&ldquo;</ins>, if there exists an implicit conversion sequence <del>for each
 element of the array from the corresponding</del> <ins>from each</ins> element of the initializer list (<del>or</del><ins>and</ins> from <tt>{}</tt> if <del>there is no such
 element</del><ins> <tt>N</tt> exceeds the number of elements in the initializer list</ins>) <ins>to <tt>X</tt></ins>, the implicit conversion sequence is the worst such implicit conversion sequence.
 	</blockquote>
 	
-	<p>Augment 13.3.3.2 [over.ics.rank] &para;(3.1) as indicated:</p>
+	<p>Augment 16.3.3.2 [over.ics.rank] &para;(3.1) as indicated:</p>
 	<blockquote class="std">
 	List-initialization sequence <tt>L1</tt> is a better conversion sequence than list-initialization sequence <tt>L2</tt> if
 	<ul>
 	<li><tt>L1</tt> converts to <tt>std::initializer_list&lt;X&gt;</tt> for some <tt>X</tt> and <tt>L2</tt> does not, or, if not that,</li>
 	<li><tt>L1</tt> converts to type &ldquo;array of <tt>N1 T</tt>&rdquo;, <tt>L2</tt> converts to type &ldquo;array of <tt>N2 T</tt>&rdquo;, and <tt>N1</tt> is smaller than <tt>N2</tt>, <ins>or if not that,</ins></li>
-	<ins><li><tt>L1</tt> converts to an array of unknown bound and <tt>L2</tt> converts to type &ldquo;array of <tt>N X</tt>&ldquo;, where <tt>N</tt> is greater than the number of elements in the initializer list,</li>
-</ins>
+	<li><ins><tt>L1</tt> converts to an array of unknown bound and <tt>L2</tt> converts to type &ldquo;array of <tt>N X</tt>&ldquo;, where <tt>N</tt> is greater than the number of elements in the initializer list, or if not that,</ins></li>
+	<li><ins><tt>L1</tt> converts to an array of known bound and <tt>L2</tt> converts to an array of unknown bound,</ins></li>
 	</ul>
-	even if one of the other rules in this paragraph would otherwise apply. [<em>Example:</em>&hellip;<em>&mdash; end example</em>]
-	</blockquote>
-	
-	<p>Create 13.3.3.2 [over.ics.rank] &para;5 with the following content:</p>
-	<blockquote class="stdins">
-	If none of the previous rules in this section apply, two list-initialization sequences are indistiguishable except that 
-	a list-initialization sequence that converts to an array of known bound is better than one that converts to an array of unknown bound.
-	[<em>Example:</em>
+	even if one of the other rules in this paragraph would otherwise apply. <ins> [<em>Example:</em>
 	<pre class="example">
-void f(int    (&&)[] ),    // #1
-     f(double (&&)[] ),    // #2
-     f(int    (&&)[2]);    // #3
+void f(int    (&&)[] );    // #1
+void f(double (&&)[] );    // #2
+void f(int    (&&)[2]);    // #3
 
 f( {1} );          // Calls #1
 f( {1.0} );        // Calls #2
 f( {1.0, 2.0} );   // Calls #2: Identity conversion is better than floating-integral conversion
 f( {1, 2} );       // Calls #3: Converting to array of known bound is better
 </pre>
-	<em>&mdash; end example</em>]
+	<em>&mdash; end example</em>]</ins> [<em>Example:</em>&hellip;<em>&mdash; end example</em>]
 	</blockquote>
-	
-<!--
-	Add "bound-strip" to the Index in [xref], unter "conversion" (similar to derived-to-base).
--->
 	
 	<h3>Acknowledgments</h3>
 	<p>The author would like to thank David Krauss for guidance and support.</p>
