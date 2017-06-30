@@ -75,13 +75,13 @@ p.grammarrrhs tt { font-style:normal }
 
 <div style="text-align: right; float: right;">
 <p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
-P0389R0<br>
+D0389R1<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
-2016-06-28</p>
+2017-06-30</p>
 </div>
 	
 	<h2><tt>template</tt> keyword in <em>unqualified-id</em>s</h2>
-	<p>This is analogous to evolution issue 92<sup><a href="#EWG92">[EWG92]</a></sup>.</p>
+	<p>This is analogous to evolution issue 92.<sup><a href="#EWG92">[EWG92]</a></sup></p>
 	<br>
 	<h3>Motivation</h3>
 	<p>Calls to function templates are occasionally unable to exploit ADL, because when specifying a <em>template-id</em> in such cases without any suitably declared template in reach,
@@ -102,19 +102,23 @@ void f() {
 
 	<h3>Wording</h3>
 	
-	<p>Augment 5.2 [expr.post] &para;1 as indicated:</p>
+	<p>Augment 8.2 [expr.post] &para;1 as indicated:</p>
 	
 	<blockquote class="std">
 		<p class="grammarlhs">postfix-expression:</p>
-		<p class="grammarrhs"><ins><tt>template</tt> template-id <tt>(</tt> expression-list<sub>opt</sub> <tt>)</tt></ins></p>
+		<p class="grammarrhs"><ins><tt>template</tt><sub>opt</sub></ins> <em>postfix-expression</em> <tt>(</tt> expression-list<sub>opt</sub> <tt>)</tt></p>
 	</blockquote>
+	
+	<p>Modify 8.2.2 [expr.call] &para;1 as indicated: </p>
+	<blockquote class="std">A function call is a postfix expression<ins>, possibly prefixed by the <tt>template</tt> keyword,</ins> followed by parentheses containing a possibly empty, comma-separated
+list of <em>initializer-clause</em>s which constitute the arguments to the function. <ins>If the <em>postfix-expression</em> is prefixed by the <tt>template</tt> keyword, it shall be a <em>template-id</em>.</ins></blockquote>
 		
-	<p>Modify 14.2 [temp.names] &para;2 as indicated:</p>
+	<p>Modify 17.2 [temp.names] &para;2 as indicated:</p>
 	
 	<blockquote class="std">For a <em>template-name</em> to be explicitly qualified by the template arguments, the name must be known to refer
 to a template <ins>or be prefixed by the <tt>template</tt> keyword</ins>.</blockquote>
 
-	<p>Modify 14.2 [temp.names] &para;3 as indicated:</p>
+	<p>Modify 17.2 [temp.names] &para;3 as indicated:</p>
 	<blockquote class="std">
 		After name lookup (3.4) finds that a name is a <em>template-name</em> or that an <em>operator-function-id</em> or a <em>literal-operator-id</em>
 		refers to a set of overloaded functions any member of which is a function template,
@@ -123,7 +127,7 @@ to a template <ins>or be prefixed by the <tt>template</tt> keyword</ins>.</block
 		operator.
 	</blockquote>
 	
-	<p>Augment 14.2 [temp.names] &para;4 as indicated:</p>
+	<p>Augment 17.2 [temp.names] &para;4 as indicated:</p>
 	<blockquote class="std"> [&hellip;]	
 	[ <em>Example</em>:<pre class="example"><code>struct X {
   template &lt;std::size_t> X* alloc();
@@ -136,47 +140,43 @@ template &lt;class T> void f(T* p) {
   T::template adjust&lt;100>();        // OK: &lt; starts template argument list
 }
 
-<ins>template &lt;typename T>
-struct B {
-  template &lt;typename U>
-  void f();
-};
-template &lt;typename T>
-struct D : B&lt;T> {
-  void g() {
-    f&lt;T>();                // ill-formed: &lt; means less than
-    template f&lt;T>();       // OK: &lt; starts template argument list
-  }
-};
+<ins>namespace N {
+	struct A { };
+	template &lt;typename T>
+	T func(const A&);
+}
 
-template &lt;typename T>
-struct E {
-  void bar() {
-    h&lt;int>(T{});           // ill-formed: &lt; means less than
-    template h&lt;int>(T{});  // OK: &lt; starts template argument list. 
-                           // h can be found by argument-dependent name lookup
-                           // in the template instantiation context.
-  }
-};
-</ins></code></pre>&mdash; <em>end example</em> ]
+void g() {
+	N::A a;
+	func&lt;int>(a);             // ill-formed: < means less than
+	template func&lt;int>(a);    // OK: &lt; starts template argument list
+}</ins></code></pre>&mdash; <em>end example</em> ]
 
 	</blockquote>
 	
 
-	<p>Modify 14.2 [temp.names] &para;5 as indicated (this simultaneously resolves core issue 1794<sup><a href="#CWG1794">[CWG1794]</a></sup>):</p>
-	<blockquote class="std">A name prefixed by the keyword <tt>template</tt> shall be a <em>template-id</em> or the name shall refer to a class template <ins>or alias template</ins>.
+	<p>Modify 17.2 [temp.names] &para;5 as indicated:</p>
+	<blockquote class="std">[&hellip;]
 	[ <em>Note</em>: The keyword <tt>template</tt> may not be applied to non-template members of class templates. &mdash; <em>end note</em>]
 	[ <em>Note</em>: As is the case with the <tt>typename</tt> prefix, the <tt>template</tt> prefix is allowed in cases where it is
 	not strictly necessary; i.e., when the <em>nested-name-specifier</em> or the expression on the left of the <tt>-></tt> or <tt>.</tt> is not
 	dependent on a <em>template-parameter</em>, or <del>the use does not appear in the scope of a template</del> <ins>the subsequent name would be found to refer to  a template via 
 	unqualified name lookup (3.4.1)</ins>. &mdash;<em>end note</em> ]</blockquote>
 	<p>NB: The first note refers to temploids and should stay as is.</p>
+	
+	<p>Modify 17.6.2 [temp.dep] &para;1 as indicated:</p>
+	<blockquote class="std">
+	In an expression of the form:<br><br>
+	
+		<p class="grammarrhs"><ins><tt>template</tt><sub>opt</sub></ins> <em>postfix-expression</em> <tt>(</tt> expression-list<sub>opt</sub> <tt>)</tt></p><br>
+
+where the <em>postfix-expression</em> is an <em>unqualified-id</em>, the <em>unqualified-id</em> denotes a <em>dependent name</em> if [&hellip;]
+	</blockquote>
 
 <h3>Acknowledgments</h3>
 <p>The author would like to thank Daveed Vandevoorde for assistance in preparing the wording.</p>
 
 <h3><a id="References">References</a></h3>
-<p>[<a id="CWG1794">CWG1794</a>] &ldquo;<tt>template</tt> keyword and alias templates&ldquo;: <a href="http://wg21.link/cwg1794">wg21.link/cwg1794</a></p>
 <p>[<a id="CWG687">CWG687</a>] &ldquo;<tt>template</tt> keyword and alias templates&ldquo;: <a href="http://wg21.link/cwg687">wg21.link/cwg687</a></p>
 <p>[<a id="EWG92">EWG92</a>] &ldquo;[tiny] Core issue 687, <tt>template</tt> keyword with <em>unqualified-id</em>s&ldquo;: <a href="http://wg21.link/ewg92">wg21.link/ewg92</a></p>
 	</body>
