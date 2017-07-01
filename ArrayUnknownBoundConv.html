@@ -75,7 +75,7 @@ p.grammarrrhs tt { font-style:normal }
 <p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
 D0388R1<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
-2017-06-30</p>
+2017-07-01</p>
 </div>
 
 <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/styles/idea.min.css">
@@ -186,7 +186,7 @@ element</del><ins> <tt>N</tt> exceeds the number of elements in the initializer 
 	<ul>
 	<li><tt>L1</tt> converts to <tt>std::initializer_list&lt;X&gt;</tt> for some <tt>X</tt> and <tt>L2</tt> does not, or, if not that,</li>
 	<li><tt>L1</tt> converts to type &ldquo;array of <tt>N1 T</tt>&rdquo;, <tt>L2</tt> converts to type &ldquo;array of <tt>N2 T</tt>&rdquo;, and <tt>N1</tt> is smaller than <tt>N2</tt>, <ins>or if not that,</ins></li>
-	<li><ins><tt>L1</tt> converts to type &ldquo;array of unknown bound of <tt>X</tt>&rdquo; and <tt>L2</tt> converts to type &ldquo;array of <tt>N X</tt>&ldquo;, where <tt>N</tt> is greater than the number of elements in the initializer list, or if not that,</ins></li>
+	<li><ins><tt>L1</tt> converts to type &ldquo;array of unknown bound of <tt>X</tt>&rdquo; and <tt>L2</tt> converts to type &ldquo;array of <tt>N X</tt>&ldquo;, where a variable of the former type, if initialized with the initializer list, would attain a bound less than <tt>N</tt>, or if not that,</ins></li>
 	<li><ins><tt>L1</tt> converts to an array of known bound of <tt>X</tt> and <tt>L2</tt> converts to an array of unknown bound of <tt>X</tt>,</ins></li>
 	</ul>
 	even if one of the other rules in this paragraph would otherwise apply. <ins> [<em>Example:</em>
