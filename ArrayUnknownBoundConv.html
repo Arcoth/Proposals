@@ -61,12 +61,16 @@ ul > li:before {
 }
 
 
+p.indented { margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
 p.grammarlhs { font-style:italic; margin-bottom: 0; margin-top: 0em }
 p.grammarrhs { font-style:italic; margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
 p.grammarrrhs { font-style:italic; margin-left:12em; margin-top:0; margin-bottom: 0; text-indent:-4em }
 p.grammarlhs tt { font-style:normal }
 p.grammarrhs tt { font-style:normal }
 p.grammarrrhs tt { font-style:normal }
+
+sup.supsub {position:relative; left: -.0em; bottom: .2em;}
+sub.supsub {position:relative; bottom: -.1em;}
 
   </style>
   <title>Proposal: conversions to arrays of unknown bound</title>
@@ -75,7 +79,7 @@ p.grammarrrhs tt { font-style:normal }
 <p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
 D0388R1<br>
 Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
-2017-07-01</p>
+2017-07-12</p>
 </div>
 
 <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.4.0/styles/idea.min.css">
@@ -85,10 +89,12 @@ Robert Haberlach (rh633{at}cam{dot}ac.uk)<br>
 	<h2>Permit conversions to arrays of unknown bound</h2>
 	<p>Permit conversions of arrays of known bound to pointers or references to arrays of unknown bound. This is analogous to evolution issue 118.<sup><a href="#EWG118">EWG118</a></sup></p>
 	
-	<h3>Changes from R1</h3>
-	<p>Incorporated the suggestions made by CWG in Kona. In particular, enable brace-elision by having [dcl.init.list] ¶(3.8) deduce the type off a declaration with a corresponding initializer; and instead of creating a new paragraph 13.3.3.2 &para;5, add a bullet to &para;(3.1). </p>
-	
-	<p>Also, the rules were adjusted to match better the one introduced by core issue 1307; the arrays now need to have the same element type for the tie-breaker in [over.ics.rank] to apply.</p>
+	<h3>Changes from R0</h3>
+	Incorporated the suggestions made by CWG in Kona/Toronto.
+	<ul><li>Enable brace-elision by having [dcl.init.list] ¶(3.8) deduce the type off a declaration with a corresponding initializer.</li>
+	<li>Instead of creating a new paragraph 13.3.3.2 ¶5, add a bullet to ¶(3.1).</li>
+	<li>The rules were adjusted to match better the one introduced by core issue 1307; the arrays now need to have the same element type for the tie-breaker in [over.ics.rank] to apply. </li>
+	<li>Allow more general pointer conversions by incorporating the bound conversion into qualification conversions.</li></ul>
 	
 	<h3>Motivation and impact</h3>
 	<p>As of core issue 393,<sup><a href="#CWG393">CWG393</a></sup> function parameters can be pointers or references to arrays of unknown bound.
@@ -105,7 +111,7 @@ This might break code, since overload resolution will potentially select differe
  However, note that such parameters were only allowed a while ago, with GCC not yet supporting them. The practical impact is therefore presumably small. </p>
 
 	<h3>Approach and decisions</h3>
-	<p>The initialization of pointers to arrays of unknown bound will be allowed by introducing a corresponding pointer conversion.
+	<p>The initialization of pointers to arrays of unknown bound will be allowed by extending qualification conversions to drop bounds.
 	Reference initialization rules will be adjusted by modifying reference compability. Such bindings have Exact Match rank.<br>
 	
 	We also propose to allow list-initialization for references to arrays of unknown bound by deducing the array temporary's size. </p>
@@ -126,7 +132,7 @@ void h(int(*)[]),      // (a)
 Furthermore, (3) should be equal to (1) (as it is to (2)). To maintain this ambiguity, (1) must be given Exact Match rank. We do not favor this ordering and feel that (3) is conceptually
 less specialized than (2) and even (1); however, consistency is more important than fixing part of the problem for arrays of unknown bounds.<br><br>
 
-Finally, (a) should be worse than (b), which is implied by (a) necessitating a pointer conversion in that case.</p>
+Finally, (a) should be worse than (b), which is implied by (a) necessitating a qualification conversion in that case.</p>
 
 <h4>Ranking of list-initialization sequences</h4>
 <p>We also propose to allow list-initialization and introduce corresponding rules in overload resolution:</p>
@@ -151,11 +157,43 @@ b({1});</code></pre>
 	<p>This is based on N4659.</p>
 	
 <input type="checkbox" id="hidedel">Hide deleted wording</input>
+
 	
-	<p>Create 7.11 [conv.ptr] &para;4 with the following content:</p>
-	<blockquote class="stdins">A prvalue of type &ldquo;pointer to array of <tt>N</tt>  <em>cv</em> <tt>T</tt>&ldquo; can be converted to a prvalue of type
-	&ldquo;pointer to array of unknown bound of <em>cv</em> <tt>T</tt>&ldquo;.
-	The result is a pointer to the array.	The null pointer value is converted to the null pointer value of the destination type.</blockquote>
+
+	<p>Modify 7.5 [conv.qual]:</p>
+	<blockquote class="std"><ol><li>A <em>cv</em><em>-decomposition</em> of a type <tt>T</tt> is a sequence of 
+	<em>cv<sub>i</sub></em> and <em>P<sub>i</sub></em> such that <tt>T</tt> is <br><br>
+
+		<p class="indented">&ldquo;<em>cv<sub>0</sub></em> <em>P<sub>0</sub></em> <em>cv<sub>1</sub></em> <em>P<sub>1</sub></em> &hellip; <em>cv<sub>n-1</sub></em> <em>P<sub>n-1</sub></em> <em>cv<sub>n</sub></em> <tt>T</tt>&rdquo; for <em>n > 0</em>,</p><br>
+
+	where each <em>cv<sub>i</sub></em> is a set of cv-qualifiers (6.9.3), and each <em>P<sub>i</sub></em> is &ldquo;pointer to&rdquo; (11.3.1), &ldquo;pointer to member of
+	class <em>C<sub>i</sub></em> of type&rdquo; (11.3.3), &ldquo;array of <em>N<sub>i</sub></em>&rdquo;, or &ldquo;array of unknown bound of&rdquo; (11.3.4). If <em>P<sub>i</sub></em> designates an array,
+	the cv-qualifiers <em>cv<sub>i+1</sub></em> on the element type are also taken as the cv-qualifiers <em>cv<sub>i</sub></em> of the array. [ <em>Example</em>: The
+	type denoted by the <em>type-id</em> <tt>const int **</tt> has two cv-decompositions, taking <tt>U</tt> as &ldquo;int&rdquo; and as &ldquo;pointer to
+	<tt>const int</tt>&rdquo;. — <em>end example</em> ] The <em>n</em>-tuple of cv-qualifiers after the first one in the longest cv-decomposition
+	of <tt>T</tt>, that is, <em>cv<sub>1</sub></em>, <em>cv<sub>2</sub></em>, &hellip;, <em>cv<sub>n</sub></em>, is called the cv-qualification signature of <tt>T</tt>.</li>
+	
+	<li>Two types <tt>T</tt><sub>1</sub> and <tt>T</tt><sub>2</sub> are <em>similar</em> if they have cv-decompositions with the same <em>n</em> such that corresponding <em>P<sub>i</sub></em>
+components are <ins>either</ins> the same <ins>or one is &ldquo;array of <em>N<sub>i</sub></em>&rdquo; and the other is &ldquo;array of unknown bound of&rdquo;,</ins> and the types denoted by U are the same.</li>
+
+	<li>A prvalue expression of type <tt>T</tt><sub>1</sub> can be converted to type <tt>T</tt><sub>2</sub> if the following conditions are 
+	satisfied, where <em>cv<sub class="supsub">i</sub><sup class="supsub">j</sup></em> <ins>and <em>P<sub class="supsub">i</sub><sup class="supsub">j</sup></em></ins> denote<del>s</del> the <del>cv-qualifiers</del> <ins>components</ins> in the cv-<del>qualification signature</del><ins>decomposition</ins> of <tt>T</tt><sub><em>j</em></sub>:<br>
+(3.1) &mdash; <tt>T</tt><sub>1</sub> and <tt>T</tt><sub>2</sub> are similar.<br>
+(3.2) &mdash; For every <em>i</em> > 0, if <tt>const</tt> is in <em>cv<sub class="supsub">i</sub><sup class="supsub">1</sup></em> then <tt>const</tt> is in <em>cv<sub class="supsub">i</sub><sup class="supsub">2</sup></em>, and similarly for <tt>volatile</tt>.<br>
+(3.3) &mdash; If the <em>cv<sub class="supsub">i</sub><sup class="supsub">1</sup></em> and <em>cv<sub class="supsub">i</sub><sup class="supsub">2</sup></em> are different, then <tt>const</tt> is in every <em>cv<sub class="supsub">k</sub><sup class="supsub">1</sup></em> for <em>0 &lt; k &lt; i</em>.<br>
+<ins>(3.4) &mdash; If <em>P<sub class="supsub">i</sub><sup class="supsub">1</sup></em> is &ldquo;array of unknown bound of&rdquo;, then <em>P<sub class="supsub">i</sub><sup class="supsub">2</sup></em> is not &ldquo;array of <em>N<sub>i</sub></em>&rdquo;.</ins>
+		</li></ol>
+		</blockquote>
+	
+	<p>Modify 8 [expr] &para;14:</p>
+	<blockquote class="std">The <em>cv-combined type</em> of two types <tt>T</tt><sub>1</sub> and <tt>T</tt><sub>2</sub> is a type <tt>T</tt><sub>3</sub> similar to <tt>T</tt><sub>1</sub> whose <del>cv-qualification signature</del> <ins>cv-decomposition</ins> (7.5)
+is:<br>
+(14.1) — for every <em>i > 0</em>, <em>cv<sub class="supsub">i</sub><sup class="supsub">3</sup></em> is the union of <em>cv<sub class="supsub">i</sub><sup class="supsub">1</sup></em> and <em>cv<sub class="supsub">i</sub><sup class="supsub">2</sup></em>;<br>
+(14.2) — if the resulting <em>cv<sub class="supsub">i</sub><sup class="supsub">3</sup></em> is different from <em>cv<sub class="supsub">i</sub><sup class="supsub">1</sup></em> or <em>cv<sub class="supsub">i</sub><sup class="supsub">2</sup></em>, then <tt>const</tt> is added to every <em>cv<sub class="supsub">k</sub><sup class="supsub">3</sup></em> for <em>0 < k < i</em>.<br>
+<ins>(14.3) &mdash; For every <em>i > 0</em>, if one of <em>P<sub class="supsub">i</sub><sup class="supsub">j</sup></em> is &ldquo;array of unknown bound of&rdquo;, <em>P<sub class="supsub">i</sub><sup class="supsub">3</sup></em> is &ldquo;array of unknown bound of&rdquo; (otherwise it is <em>P<sub class="supsub">i</sub><sup class="supsub">1</sup></em>). </ins>
+</blockquote>
+
+<p><i>Drafting note: it may be worth to consider renaming certain terms starting with &ldquo;cv&rdquo;, e.g. cv-combined types are not merely combining cv-qualifiers anymore. Possibly an editorial issue?</i></p>
 	
 	<p>Modify 11.6.3 [dcl.init.ref] &para;4 as follows:</p>
 	
@@ -203,6 +241,11 @@ f( {1, 2} );       // Calls #3: Converting to array of known bound is better tha
 </pre>
 	<em>&mdash; end example</em>]</ins> [<em>Example:</em>&hellip;<em>&mdash; end example</em>]
 	</blockquote>
+	
+	<p>Modify 16.3.3.2 [over.ics.rank] &para;(3.2.5):</p>
+	<blockquote class="std"><tt>S1</tt> and <tt>S2</tt> differ only in their qualification conversion and yield similar types <tt>T1</tt> and <tt>T2</tt> (7.5),
+respectively, <del>and the cv-qualification signature of type <tt>T1</tt> is a proper subset of the cv-qualification
+signature of type <tt>T2</tt></del><ins>where <tt>T1</tt> can be converted to <tt>T2</tt></ins></blockquote>
 	
 	<h3>Acknowledgments</h3>
 	<p>The author would like to thank David Krauss and Johannes Schaub for their valuable feedback.</p>
