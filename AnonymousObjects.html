@@ -1,0 +1,209 @@
+
+<!-- saved from url=(0054)file:///home/arcoth/Programming/Proposals/P0388R2.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <style type="text/css">
+<style type="text/css">
+	
+
+body { color: #000000; background-color: #FFFFFF; }
+ins, ins * { text-decoration:none; font-weight:bold; background-color:#A0FFA0 }
+del, del * { text-decoration:line-through; background-color:#FFA0A0 }
+#hidedel:checked ~ * del, #hidedel:checked ~ * del * { display:none; visibility:hidden }
+
+p, li, blockquote, input {
+    font-family: "sans", Times, serif;
+    font-size: 11pt
+}
+h1, h2, h3 {font-family: "sans", Times, serif;}
+h4 {font-family: "sans", Times, serif; margin-top:0.25em;}
+
+p.example { margin-left: 2em; }
+pre.example { margin-left: 2em; }
+div.example { margin-left: 2em; }
+
+code.extract { background-color: #F5F6A2; }
+pre.extract { margin-left: 2em; background-color: #FFFFFF;
+  border: 1px solid #E1E28E; font-family: "monospace"; }
+
+p.function { }
+.attribute { margin-left: 2em; }
+.attribute dt { float: left; font-style: italic;
+  padding-right: 1ex; }
+.attribute dd { margin-left: 0em; }
+
+blockquote.std { color: #000000; background-color: #F1F1F1;
+  border: 1px solid #D1D1D1;
+  padding-left: 0.5em; padding-right: 0.5em; }
+blockquote.stddel { text-decoration: line-through;
+  color: #000000; background-color: #FFEBFF;
+  border: 1px solid #ECD7EC;
+  padding-left: 0.5empadding-right: 0.5em; ; }
+
+blockquote.stdins { 
+  color: #000000; background-color: #C8FFC8;
+  border: 1px solid #B3EBB3; padding: 0.5em; padding-top:0; }
+
+blockquote pre em { font-family: normal }
+
+table { border: 1px solid black; border-spacing: 0px;
+  margin-left: auto; margin-right: auto; }
+th { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+td { text-align: left; vertical-align: top;
+  padding-left: 0.8em; border: none; }
+  
+
+ul { list-style-type: none; }
+a { text-decoration: none; }
+
+ul > li:before {
+	content: "\2014";
+	position: absolute;
+	margin-left: -1.5em; 
+}
+
+
+p.indented { margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarlhs { font-style:italic; margin-bottom: 0; margin-top: 0em }
+p.grammarrhs { font-style:italic; margin-left:8em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarrrhs { font-style:italic; margin-left:12em; margin-top:0; margin-bottom: 0; text-indent:-4em }
+p.grammarlhs tt { font-style:normal }
+p.grammarrhs tt { font-style:normal }
+p.grammarrrhs tt { font-style:normal }
+
+sup.supsub {position:relative; left: -.0em; bottom: .2em;}
+sub.supsub {position:relative; bottom: -.1em;}
+
+  </style>
+  <title>Proposal: Anonymous guard objects</title>
+</head><body>
+<div style="text-align: right; float: right;">
+<p>ISO/IEC JTC1 SC22 WG21, Evolution Working Group<br>
+P0388R2<br>
+Robert Haberlach (r.hl{at}gmx{dot}net)<br>
+2018-04-25</p>
+</div>
+
+<link rel="stylesheet" href="./AnonymousObjects_files/idea.min.css">
+<script src="./AnonymousObjects_files/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+	
+	<h1>Anonymous guard objects</h1>
+	
+	This proposal discusses approaches to the problem of having to name objects that exist primarily for implicit effects, in particular in the scope of RAII.
+	
+	<h2>Motivation</h2>
+	<p>There are situations in which one would like to declare a so-called <i>guard</i> (object) for a particular effect in its destructor. A classic example would be a lock guard:</p>
+	  <pre class="extract"><code>void safe_increment() {
+    std::lock_guard&ltstd::mutex> lock(counter_mutex);
+    ++counter;
+}
+</code></pre>
+<p>Or, using an example from the proposal for scope guards<sup><a href="#P0052">[P0052]</a></sup>:</p>
+<pre class="extract"><code>void demo_scope_exit_fail_success(){
+  std::ostringstream out{};
+  auto lam=[&]{out << "called ";};
+  try{
+    auto v=make_scope_exit([&]{out << "always ";});
+    auto w=make_scope_success([&]{out << "not ";}); // not called
+    auto x=make_scope_fail(lam); // called
+    throw 42;
+  } catch(...) {
+    auto y=make_scope_fail([&]{out << "not ";}); // not called
+    auto z=make_scope_success([&]{out << "handled";}); // called
+  }
+  ASSERT_EQUAL("called always handled",out.str());
+}</code></pre>
+
+
+<p>The language requires that each definition of an object provide a unique identifier for that object. 
+This is obviously burdensome when multiple such objects are to be declared, and the above sample code underlines 
+that by using single-character identifiers. Additionally, compilers might spuriously warn about unused identifiers, so the <tt>[[maybe_unused]]</tt> attribute would have to be applied to silence that warning. Conversely, when implementations 
+decide to not warn about any unused objects with a side-effect laden destructor, some of these will be false negatives.</p>
+
+<h2>Approaches</h2>
+<p>In principle, we need to be able to declare an object without having to come up with an identifier. </p>
+
+<h3>#1: Macros</h3>
+<p>One solution that requires no core change whatsoever is to use a macro that generates identifiers based on the <tt>__LINE__</tt> macro. </p>
+<pre class="extract"><code>#define WRAP_(x) unique_identifier_ ## x
+#define WRAP(x) WRAP_(x)
+#define Anon WRAP(__LINE__) [[maybe_unused]]
+</code></pre>
+<p>Obviously the macro name <tt>Anon</tt> is likely to clash, so something more verbose would be required. Usage of this macro is, up to fiddling with line control, guaranteed to not violate the ODR by producing 
+differing sets of tokens in different inclusions of a header, because the line macro is resolved within a header (this would not be guaranteed if we had used <tt>__COUNTER__</tt> or similar). 
+However, we would prefer a solution using a first-class citizen of the language, not a macro that generates identifiers based on the current value of the <tt>__LINE__</tt> macro.</p> 	
+
+<h3>#2: A magic declarator</h3>
+<p>Instead of a macro name, a special identifier could be used to treat this correspondingly. (Unfortunately, the highly obvious <tt>_</tt> is sometimes 
+declared as a macro&mdash;see GNU gettext<sup><a href="#gettext">[gettext]</a></sup>). </p>
+<pre class="extract"><code class="cpp">auto ? = make_scope_exit([&]{out << "always ";});
+auto ? = make_scope_success([&]{out << "not ";}); // not called
+auto ? = make_scope_fail(lam); // called
+</code></pre>
+<p>This solution could be extended to name unused elements of a structured binding. From all characters in the basic character set, we only find <tt>?</tt> and <tt>.</tt> to be satisfying choices; alternative characters such as <tt>%</tt> or <tt>^</tt> aren't associated with being placeholders.  </p>
+
+<p>Alternatively, a legitimate identifier such as <tt>anon</tt> could be used. To ensure backward compatability, treat any declaration of an entity named <tt>anon</tt> as a regular declaration; only 
+when another object in the same scope is declared <tt>anon</tt>, neither of them can be named anymore. It isn't clear what identifier would be terse and meaningful enough, however. </p>
+
+<h3>#3: Special syntax</h3>
+<p>We could avoid using a <em>simple-declaration</em> altogether, introducing <em>anonymous-declaration</em>s:</p>
+<pre class="extract"><code>using std::lock_guard&lt;std::mutex>(counter_mutex);
+</code></pre>
+<p>One didactic disadvantage with this approach is the perceived
+ambiguity between the above and a <i>using-declaration</i>:</p>
+<pre class="extract"><code>using std::lock_guard;</code></pre>
+	
+<h2>Design considerations and impact for #2</h2>
+<p>When a variable is declared as <tt>?</tt>, it has no name. That also precludes any linkage being involved. The primary question is when to permit such declarations. Clearly, they are only useful when the variable is potentially (think of templates) of class type. Thus,  </p>
+<ul>
+<li>the type of the declaration shall not be a function type;</li>
+<li>the declaration should be a definition, or the variable can never be defined; </li>
+<li>the declarator must not contain a <em>ptr-operator</em>;</li>
+<li>the declarator must not contain <em>parameters-and-qualifiers</em>.</li>
+</ul>
+<p>This is what the wording currently reflects.</p>
+
+<p>We know of no possible program that would be affected by introducing this feature.</p>
+	
+<h2>Proposed wording</h2>
+
+	<p>This is based on N4727.</p>
+	
+<input type="checkbox" id="hidedel">Hide deleted wording</input>
+
+<p>Augment [dcl.decl] &para; 5:</p>
+<blockquote class="std"><p>The <em>init-declarator-list</em> appearing in a declaration is a comma-separated sequence of declarators, each of which can have an initializer.</p>
+
+<p class="grammarlhs">declarator:</p>
+<p class="grammarrhs">ptr-declarator</p>
+<p class="grammarrhs">noptr-declarator parameters-and-qualifiers trailing-return-type</p>
+<p class="grammarrhs"><ins><tt>?</tt></ins></p>
+
+</blockquote>
+
+<p>Augment [dcl.meaning] &para;1:</p>
+<blockquote class="std">
+A declarator contains <ins>either no or</ins> exactly one <em>declarator-id</em>; <ins>if present, </ins>it names the identifier that is declared. An <em>unqualified-id</em> occurring in a <em>declarator-id</em> shall be a simple identifier except 
+for the declaration of some special 
+functions ([class.ctor], [class.conv], [class.dtor], [over.oper]) and for the declaration of template specializations or partial specializations ([temp.spec]). When the <em>declarator-id</em> is qualified, the declaration 
+shall refer to a previously declared member of the class or namespace to which the qualifier refers (or, in the case of a namespace, of an element of the inline namespace set of that namespace ([namespace.def])) 
+or to a specialization thereof; the member shall not merely have been introduced by a <em>using-declaration</em> in the scope of the class or namespace nominated by the <em>nested-name-specifier</em> of the <em>declarator-id</em>. 
+The <em>nested-name-specifier</em> of a qualified <em>declarator-id</em> shall not begin with a <em>decltype-specifier</em>. [<em>Note</em>: If the qualifier is the global ​<tt>::</tt> scope resolution operator, the declarator-id refers to a name declared 
+in the global namespace scope. &mdash; <em>end note</em>] The optional <em>attribute-specifier-seq</em> following a <em>declarator-id</em> appertains to the entity that is declared. 
+<ins>When the <em>declarator</em> is <tt>?</tt>, the declaration shall be the definition of a block-scope or namespace-scope variable. Such a declaration declares no name, and the declared variable cannot be referred to by <tt>?</tt>, but in all other respects behaves like a named variable. 
+[<em>Note</em>: In particular, its lifetime is unaffected. &mdash; <em>end note</em>] </ins>
+</blockquote>
+	
+<p>Modify [dcl.dcl] &para;10:</p>
+<blockquote class="std">Each <em>init-declarator</em> in the <em>init-declarator-list</em> contains <del>exactly</del> <ins>at most</ins> one <em>declarator-id</em>, which<ins>, if present,</ins> is the name declared
+by that <em>init-declarator</em> and hence one of the names declared by the declaration. The <em>defining-type-specifiers</em>
+(10.1.7) in the <em>decl-specifier-seq </em>and the recursive declarator structure of the <em>init-declarator</em> describe a
+type (11.3), which is then associated with the <del>name</del><ins>entity</ins> being declared by the <em>init-declarator</em>.</blockquote>
+	
+	<h2>References</h2>
+<p>[<a id="P0052">P0052</a>] &ldquo;Generic Scope Guard and RAII Wrapper for the
+Standard Library&ldquo;: <a href="http://wg21.link/p0052">wg21.link/p0052</a></p>
+<p>[<a id="gettext">gettext</a>] &ldquo;4.4 How Marks Appear in Sources&ldquo;: <a href="https://www.gnu.org/software/gettext/manual/html_node/Mark-Keywords.html">gnu.org/&hellip;</a></p>
+
+</body></html>
